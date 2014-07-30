@@ -7,7 +7,7 @@ def parse_args():
     parser.set_defaults(# parameter set 1
                         input_directory=None,
                         output_directory=None,
-                        corpus_name=None,
+                        #corpus_name=None,
                         
                         # parameter set 2
                         alpha_eta=-1,
@@ -25,8 +25,8 @@ def parse_args():
                       help="input directory [None]");
     parser.add_option("--output_directory", type="string", dest="output_directory",
                       help="output directory [None]");
-    parser.add_option("--corpus_name", type="string", dest="corpus_name",
-                      help="the corpus name [None]");
+    #parser.add_option("--corpus_name", type="string", dest="corpus_name",
+                      #help="the corpus name [None]");
 
     # parameter set 2
     parser.add_option("--alpha_eta", type="float", dest="alpha_eta",

@@ -9,14 +9,13 @@ def main():
     options = option_parser.parse_args();
     
     # parameter set 1
-    assert(options.corpus_name!=None);
+    #assert(options.corpus_name!=None);
     assert(options.input_directory!=None);
     assert(options.output_directory!=None);
     
-    corpus_name = options.corpus_name;
-    
     input_directory = options.input_directory;
-    input_directory = os.path.join(input_directory, corpus_name);
+    input_directory = input_directory.rstrip("/");
+    corpus_name = os.path.basename(input_directory);
     
     output_directory = options.output_directory;
     if not os.path.exists(output_directory):

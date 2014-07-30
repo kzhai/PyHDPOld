@@ -75,7 +75,6 @@ def main():
     output_directory = os.path.join(output_directory, suffix);
     os.mkdir(os.path.abspath(output_directory));
     
-    #def generate_corpus(number_of_documents=100, number_of_topics=3, alpha=None):
     if asymmetric_alpha_prior:
         alpha = numpy.random.random(number_of_topics);
         alpha /= numpy.sum(alpha);
@@ -83,7 +82,6 @@ def main():
         alpha = numpy.zeros(number_of_topics) + 1.0/number_of_topics;
 
     output_file_stream = open(os.path.join(output_directory, "doc.dat"), 'w');
-    
     for doc_id in xrange(number_of_documents):
         doc = [];
         gamma = numpy.random.mtrand.dirichlet(alpha);
@@ -93,6 +91,13 @@ def main():
             doc.append("K%dV%d" % (topic_id, type_id));
         
         output_file_stream.write("%s\n" % (" ".join(doc)));
+    output_file_stream.close();
+
+    output_file_stream = open(os.path.join(output_directory, "voc.dat"), 'w');
+    for topic_id in xrange(number_of_topics):
+        for type_id in xrange(number_of_types_per_topic):
+            output_file_stream.write("K%dV%d\n" % (topic_id, type_id));
+    output_file_stream.close();
         
 if __name__ == '__main__':
     main();

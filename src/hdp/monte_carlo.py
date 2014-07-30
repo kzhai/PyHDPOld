@@ -107,7 +107,7 @@ class MonteCarlo(object):
             
             # self._k_dt records down which topic a table was assigned to
             self._k_dt[d] = numpy.zeros(1, dtype=numpy.int);
-            assert(len(self._k_dt[d]) == len(numpy.unique(self._t_dv[d])));
+            assert (len(self._k_dt[d]) == len(numpy.unique(self._t_dv[d]))), (len(self._k_dt[d]), self._t_dv[d], len(numpy.unique(self._t_dv[d])));
             
             # word_count_table records down the number of words sit on every table
             self._n_dt[d] = numpy.zeros(1, dtype=numpy.int) + len(self._corpus[d]);
@@ -447,7 +447,8 @@ class MonteCarlo(object):
                         self._n_kv[old_topic, word_id] -= selected_word_freq_dist[word_id];
                         assert(self._n_kv[old_topic, word_id] >= 0)
                         self._n_kv[new_topic, word_id] += selected_word_freq_dist[word_id];
-                                        
+    
+    '''
     def sample_topics(self):
         # sample topic assignment, see which topic it should belong to
         # for topic_id in numpy.random.permutation(xrange(self._K)):
@@ -538,7 +539,8 @@ class MonteCarlo(object):
                     self._k_dt[d][numpy.nonzero(self._k_dt[d] == topic_id)[0]] = new_topic;
 
         return;
-
+    '''
+    
     def resample_topics_backup(self):
         # sample topic assignment, see which topic it should belong to
         # for topic_id in numpy.random.permutation(xrange(self._K)):

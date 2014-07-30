@@ -32,10 +32,10 @@ class MonteCarlo(object):
     @param snapshot_interval: the interval for exporting a snapshot of the model
     """
     def __init__(self,
-                 resample_topics=False,
+                 split_merge_heuristics=0,
                  hash_oov_words=False
                  ):
-        self._resample_topics = resample_topics;
+        self._split_merge_heuristics = split_merge_heuristics;
         self._hash_oov_words = hash_oov_words;
         
     """
@@ -59,16 +59,16 @@ class MonteCarlo(object):
             self._index_to_word[len(self._index_to_word)] = word;
             self._word_to_index[word] = len(self._word_to_index);
             
-        self._vocab = self._word_to_index.keys();
-        self._vocabulary_size = len(self._vocab);
+        self._vocabulary = self._word_to_index.keys();
+        self._vocabulary_size = len(self._vocabulary);
         
         # top level smoothing
         self._alpha_alpha = alpha_alpha
         # bottom level smoothing
         self._alpha_gamma = alpha_gamma
         # vocabulary smoothing
-        if alpha_eta<=0:
-            self._alpha_eta = 1.0/self._vocabulary_size;
+        if alpha_eta <= 0:
+            self._alpha_eta = 1.0 / self._vocabulary_size;
         else:
             self._alpha_eta = alpha_eta;
             
@@ -134,12 +134,12 @@ class MonteCarlo(object):
             words = docs[d].split()
             wordid = list(); 
             for word in words:
-                if (word in self._vocab):
+                if (word in self._vocabulary):
                     wordtoken = self._word_to_index[word]
                     wordid.append(wordtoken);
                 else:
                     if self._hash_oov_words:
-                        wordtoken = hash(word) % len(self._vocab);
+                        wordtoken = hash(word) % len(self._vocabulary);
                         wordid.append(wordtoken);
                         
             wordids.append(wordid)
@@ -150,6 +150,9 @@ class MonteCarlo(object):
         self._counter += 1;
         
         self.sample_cgs();
+        
+        if self._split_merge_heuristics > 0:
+            self.sample_topics();
     
         # compact all the parameters, including removing unused topics and unused tables
         self.compact_params();
@@ -163,11 +166,11 @@ class MonteCarlo(object):
     sample the data to train the parameters
     """
     def sample_cgs(self):
-        #sample the total data
+        # sample the total data
         for document_index in numpy.random.permutation(xrange(self._D)):
             # sample word assignment, see which table it should belong to
             for word_index in numpy.random.permutation(xrange(len(self._corpus[document_index]))):
-                #self.update_params(document_index, word_index, -1);
+                # self.update_params(document_index, word_index, -1);
                 
                 # retrieve the table_id of the current word of current document
                 table_id = self._t_dv[document_index][word_index];
@@ -253,14 +256,14 @@ class MonteCarlo(object):
                         self._K += 1;
                         self._n_kv = numpy.vstack((self._n_kv, numpy.zeros((1, self._vocabulary_size))));
                         assert(self._n_kv.shape == (self._K, self._vocabulary_size));
-                        #self._n_dk = numpy.vstack((self._n_dk, numpy.zeros((1, self._D))));
-                        #assert(self._n_dk.shape == (self._K, self._D));
+                        # self._n_dk = numpy.vstack((self._n_dk, numpy.zeros((1, self._D))));
+                        # assert(self._n_dk.shape == (self._K, self._D));
                         self._n_dk = numpy.hstack((self._n_dk, numpy.zeros((self._D, 1))));
                         assert(self._n_dk.shape == (self._D, self._K));
                         self._m_k = numpy.hstack((self._m_k, numpy.zeros(1)));
                         assert(len(self._m_k) == self._K);
                         
-                #self.update_params(document_index, word_index, +1);
+                # self.update_params(document_index, word_index, +1);
                 
                 # retrieve the table_id of the current word of current document
                 table_id = self._t_dv[document_index][word_index];
@@ -366,12 +369,7 @@ class MonteCarlo(object):
                             self._n_kv[new_topic, word_id] += selected_word_freq_dist[word_id];
             '''
             
-        if self._resample_topics:
-            self.sample_topics();
-            
     def sample_tables(self, document_index):
-        from nltk.probability import FreqDist;
-        
         # sample table assignment, see which topic it should belong to
         for table_index in numpy.random.permutation(xrange(len(self._k_dt[document_index]))):
             # if this table is not empty, sample the topic assignment of this table
@@ -381,7 +379,7 @@ class MonteCarlo(object):
                 # find the index of the words sitting on the current table
                 selected_word_index = numpy.nonzero(self._t_dv[document_index] == table_index)[0];
                 # find the frequency distribution of the words sitting on the current table
-                selected_word_freq_dist = FreqDist([self._corpus[document_index][term] for term in list(selected_word_index)]);
+                selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index][term] for term in list(selected_word_index)]);
 
                 # compute the probability of assigning current table every topic
                 topic_probability = numpy.zeros(self._K + 1);
@@ -413,9 +411,9 @@ class MonteCarlo(object):
                         topic_probability[topic_index] += numpy.log(self._m_k[topic_index]);
 
                 # normalize the distribution and sample new topic assignment for this topic
-                #topic_probability = numpy.exp(topic_probability);
-                #topic_probability = topic_probability/numpy.sum(topic_probability);
-                #topic_probability = numpy.exp(log_normalize(topic_probability));
+                # topic_probability = numpy.exp(topic_probability);
+                # topic_probability = topic_probability/numpy.sum(topic_probability);
+                # topic_probability = numpy.exp(log_normalize(topic_probability));
                 topic_probability -= scipy.misc.logsumexp(topic_probability);
                 topic_probability = numpy.exp(topic_probability);
                 
@@ -430,8 +428,8 @@ class MonteCarlo(object):
                     # if this table starts a new topic, expand all matrix
                     if new_topic == self._K:
                         self._K += 1;
-                        #self._n_dk = numpy.vstack((self._n_dk, numpy.zeros((1, self._D))));
-                        #assert(self._n_dk.shape == (self._K, self._D));
+                        # self._n_dk = numpy.vstack((self._n_dk, numpy.zeros((1, self._D))));
+                        # assert(self._n_dk.shape == (self._K, self._D));
                         self._n_dk = numpy.hstack((self._n_dk, numpy.zeros((self._D, 1))));
                         assert(self._n_dk.shape == (self._D, self._K));
                         
@@ -452,11 +450,11 @@ class MonteCarlo(object):
                                         
     def sample_topics(self):
         # sample topic assignment, see which topic it should belong to
-        #for topic_id in numpy.random.permutation(xrange(self._K)):
+        # for topic_id in numpy.random.permutation(xrange(self._K)):
         
         for word_id in self._index_to_word:
             # find the topics that this word currently sits on
-            word_topic_index = numpy.nonzero(self._n_kv[:, word_id]>0)[0];
+            word_topic_index = numpy.nonzero(self._n_kv[:, word_id] > 0)[0];
             # find the frequency distribution of the words sitting on the current table
             selected_word_freq_dist = self._n_kv[topic_id, selected_word_index];
             
@@ -467,7 +465,7 @@ class MonteCarlo(object):
                 continue;
             
             # find the index of the words sitting on the current table
-            selected_word_index = numpy.nonzero(self._n_kv[topic_id, :]>0)[0];
+            selected_word_index = numpy.nonzero(self._n_kv[topic_id, :] > 0)[0];
             # find the frequency distribution of the words sitting on the current table
             selected_word_freq_dist = self._n_kv[topic_id, selected_word_index];
             
@@ -478,17 +476,17 @@ class MonteCarlo(object):
             
             n_k = numpy.sum(self._n_kv, axis=1);
             assert(len(n_k) == (self._K))
-            #test_log_probability = numpy.zeros(self._K) + negative_infinity;
+            # test_log_probability = numpy.zeros(self._K) + negative_infinity;
             
             for topic_index in xrange(self._K):
                 # if current table is the only table assigned to current topic,
                 # it means this topic is probably less useful or less generalizable to other documents,
                 # it makes more sense to collapse this topic and hence assign this table to other topic.
-                if self._m_k[topic_index]==0:
+                if self._m_k[topic_index] == 0:
                     log_topic_probability[topic_index] = negative_infinity;
                     continue;
                 
-                if topic_index==topic_id:
+                if topic_index == topic_id:
                     log_topic_probability[topic_index] = numpy.log(self._alpha_gamma) * self._m_k[topic_id];
                     
                     log_topic_probability[topic_index] += scipy.special.gammaln(self._vocabulary_size * self._alpha_eta) - scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_id]);
@@ -496,7 +494,7 @@ class MonteCarlo(object):
                         word_id = selected_word_index[word_pos];
                         log_topic_probability[topic_index] += scipy.special.gammaln(self._alpha_eta + selected_word_freq_dist[word_pos]) - scipy.special.gammaln(self._alpha_eta);
                         
-                    #test_log_probability[topic_index] = numpy.log(self._alpha_gamma) * self._m_k[topic_id];
+                    # test_log_probability[topic_index] = numpy.log(self._alpha_gamma) * self._m_k[topic_id];
                 else:
                     log_topic_probability[topic_index] = numpy.log(self._m_k[topic_index]) * self._m_k[topic_id];
                     
@@ -505,19 +503,19 @@ class MonteCarlo(object):
                         word_id = selected_word_index[word_pos];
                         log_topic_probability[topic_index] += scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta + selected_word_freq_dist[word_pos]) - scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta);
                     
-                    #test_log_probability[topic_index] = numpy.log(self._m_k[topic_index]) * self._m_k[topic_id];    
+                    # test_log_probability[topic_index] = numpy.log(self._m_k[topic_index]) * self._m_k[topic_id];    
             # normalize the distribution and sample new topic assignment for this topic
-            #log_topic_probability = numpy.exp(log_topic_probability);
-            #log_topic_probability = log_topic_probability/numpy.sum(log_topic_probability);
-            #log_topic_probability = numpy.exp(log_normalize(log_topic_probability));
+            # log_topic_probability = numpy.exp(log_topic_probability);
+            # log_topic_probability = log_topic_probability/numpy.sum(log_topic_probability);
+            # log_topic_probability = numpy.exp(log_normalize(log_topic_probability));
             log_topic_probability -= scipy.misc.logsumexp(log_topic_probability);
             topic_probability = numpy.exp(log_topic_probability);
             print "topic merging probability of topic %d: %s" % (topic_id, topic_probability);
             cdf = numpy.cumsum(topic_probability);
             new_topic = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
             
-            #test_log_probability -= scipy.misc.logsumexp(test_log_probability);
-            #print "test_log_probability:", numpy.exp(test_log_probability);
+            # test_log_probability -= scipy.misc.logsumexp(test_log_probability);
+            # print "test_log_probability:", numpy.exp(test_log_probability);
             
             # if the entire topic is assigned to a new topic
             if new_topic != topic_id:
@@ -537,20 +535,20 @@ class MonteCarlo(object):
                 assert self._n_dk.shape == (self._D, self._K);
                 
                 for d in xrange(self._D):
-                    self._k_dt[d][numpy.nonzero(self._k_dt[d]==topic_id)[0]] = new_topic;
+                    self._k_dt[d][numpy.nonzero(self._k_dt[d] == topic_id)[0]] = new_topic;
 
         return;
 
     def resample_topics_backup(self):
         # sample topic assignment, see which topic it should belong to
-        #for topic_id in numpy.random.permutation(xrange(self._K)):
+        # for topic_id in numpy.random.permutation(xrange(self._K)):
         for topic_id in numpy.argsort(self._m_k):
             # if this table is empty, no need to resample the topic assignment 
             if self._m_k[topic_id] <= 0:
                 continue;
             
             # find the index of the words sitting on the current table
-            selected_word_index = numpy.nonzero(self._n_kv[topic_id, :]>0)[0];
+            selected_word_index = numpy.nonzero(self._n_kv[topic_id, :] > 0)[0];
             # find the frequency distribution of the words sitting on the current table
             selected_word_freq_dist = self._n_kv[topic_id, selected_word_index];
             
@@ -559,17 +557,17 @@ class MonteCarlo(object):
             
             n_k = numpy.sum(self._n_kv, axis=1);
             assert(len(n_k) == (self._K))
-            #test_log_probability = numpy.zeros(self._K) + negative_infinity;
+            # test_log_probability = numpy.zeros(self._K) + negative_infinity;
             
             for topic_index in xrange(self._K):
                 # if current table is the only table assigned to current topic,
                 # it means this topic is probably less useful or less generalizable to other documents,
                 # it makes more sense to collapse this topic and hence assign this table to other topic.
-                if self._m_k[topic_index]==0:
+                if self._m_k[topic_index] == 0:
                     log_topic_probability[topic_index] = negative_infinity;
                     continue;
                 
-                if topic_index==topic_id:
+                if topic_index == topic_id:
                     log_topic_probability[topic_index] = numpy.log(self._alpha_gamma) * self._m_k[topic_id];
                     
                     log_topic_probability[topic_index] += scipy.special.gammaln(self._vocabulary_size * self._alpha_eta) - scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_id]);
@@ -577,7 +575,7 @@ class MonteCarlo(object):
                         word_id = selected_word_index[word_pos];
                         log_topic_probability[topic_index] += scipy.special.gammaln(self._alpha_eta + selected_word_freq_dist[word_pos]) - scipy.special.gammaln(self._alpha_eta);
                         
-                    #test_log_probability[topic_index] = numpy.log(self._alpha_gamma) * self._m_k[topic_id];
+                    # test_log_probability[topic_index] = numpy.log(self._alpha_gamma) * self._m_k[topic_id];
                 else:
                     log_topic_probability[topic_index] = numpy.log(self._m_k[topic_index]) * self._m_k[topic_id];
                     
@@ -586,19 +584,19 @@ class MonteCarlo(object):
                         word_id = selected_word_index[word_pos];
                         log_topic_probability[topic_index] += scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta + selected_word_freq_dist[word_pos]) - scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta);
                     
-                    #test_log_probability[topic_index] = numpy.log(self._m_k[topic_index]) * self._m_k[topic_id];    
+                    # test_log_probability[topic_index] = numpy.log(self._m_k[topic_index]) * self._m_k[topic_id];    
             # normalize the distribution and sample new topic assignment for this topic
-            #log_topic_probability = numpy.exp(log_topic_probability);
-            #log_topic_probability = log_topic_probability/numpy.sum(log_topic_probability);
-            #log_topic_probability = numpy.exp(log_normalize(log_topic_probability));
+            # log_topic_probability = numpy.exp(log_topic_probability);
+            # log_topic_probability = log_topic_probability/numpy.sum(log_topic_probability);
+            # log_topic_probability = numpy.exp(log_normalize(log_topic_probability));
             log_topic_probability -= scipy.misc.logsumexp(log_topic_probability);
             topic_probability = numpy.exp(log_topic_probability);
             print "topic merging probability of topic %d: %s" % (topic_id, topic_probability);
             cdf = numpy.cumsum(topic_probability);
             new_topic = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
             
-            #test_log_probability -= scipy.misc.logsumexp(test_log_probability);
-            #print "test_log_probability:", numpy.exp(test_log_probability);
+            # test_log_probability -= scipy.misc.logsumexp(test_log_probability);
+            # print "test_log_probability:", numpy.exp(test_log_probability);
             
             # if the entire topic is assigned to a new topic
             if new_topic != topic_id:
@@ -618,7 +616,7 @@ class MonteCarlo(object):
                 assert self._n_dk.shape == (self._D, self._K);
                 
                 for d in xrange(self._D):
-                    self._k_dt[d][numpy.nonzero(self._k_dt[d]==topic_id)[0]] = new_topic;
+                    self._k_dt[d][numpy.nonzero(self._k_dt[d] == topic_id)[0]] = new_topic;
 
         return;
 
@@ -669,7 +667,7 @@ class MonteCarlo(object):
         # compute the word level log likelihood
         log_likelihood += self.word_log_likelihood();
         
-        #todo: add in the likelihood for hyper-parameter
+        # todo: add in the likelihood for hyper-parameter
         
         return log_likelihood
         
@@ -722,11 +720,11 @@ class MonteCarlo(object):
         for topic_index in xrange(self._K):
             output.write("==========\t%d\t==========\n" % (topic_index));
             
-            i=0;
+            i = 0;
             for word_index in reversed(numpy.argsort(beta_probability[topic_index, :])):
                 i += 1;
                 output.write(self._index_to_word[word_index] + "\t" + str(beta_probability[topic_index, word_index]) + "\n");
-                if top_display>0 and i>=top_display:
+                if top_display > 0 and i >= top_display:
                     break
 
         output.close();
@@ -819,7 +817,7 @@ def print_topics(n_kv, term_mapping, top_words=10):
         sorted_counts = numpy.sort(n_kv, axis=1);
         sorted_counts = sorted_counts[:, -top_words][:, numpy.newaxis];
     
-    assert(sorted_counts.shape==(K, 1));
+    assert(sorted_counts.shape == (K, 1));
 
     for k in xrange(K):
         display = (n_kv[[k], :] >= sorted_counts[k, :]);
@@ -836,4 +834,4 @@ run HDP on a synthetic corpus.
 if __name__ == '__main__':
     a = numpy.random.random((2, 3));
     print a;
-    print a/numpy.sum(a, axis=1)[:, numpy.newaxis];
+    print a / numpy.sum(a, axis=1)[:, numpy.newaxis];

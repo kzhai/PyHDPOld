@@ -65,7 +65,7 @@ def main():
     number_of_tokens_per_document = options.number_of_tokens_per_document;
     
     now = datetime.datetime.now();
-    suffix = now.strftime("%y%b%d-%H%M%S")+"";
+    suffix = now.strftime("%y%m%d-%H%M%S")+"";
     suffix += "-k%d" % (number_of_topics);
     suffix += "-d%d" % (number_of_documents);
     suffix += "-vpk%d" % (number_of_types_per_topic);

@@ -52,7 +52,6 @@ class MonteCarlo(object):
                     alpha_gamma,
                     alpha_eta=0
                     ):
-        
         self._word_to_index = {};
         self._index_to_word = {};
         for word in set(vocab):
@@ -130,9 +129,8 @@ class MonteCarlo(object):
         wordids = list()
 
         for d in xrange(D):
-            docs[d] = docs[d].lower()
             words = docs[d].split()
-            wordid = list(); 
+            wordid = list();
             for word in words:
                 if (word in self._vocabulary):
                     wordtoken = self._word_to_index[word]
@@ -154,8 +152,7 @@ class MonteCarlo(object):
         if self._split_merge_heuristics > 0:
             self.sample_topics();
     
-        # compact all the parameters, including removing unused topics and unused tables
-        self.compact_params();
+        
         
         print "accumulated number of tables:", self._m_k;
         print "accumulated number of tokens:", numpy.sum(self._n_kv, axis=1)[:, numpy.newaxis].T;
@@ -287,88 +284,145 @@ class MonteCarlo(object):
                 assert(numpy.all(self._m_k >= 0));
                 assert(numpy.all(self._k_dt[document_index] >= 0));
             
-            self.sample_tables();
+            self.sample_tables(document_index);
             
-            '''
-            # sample table assignment, see which topic it should belong to
-            for table_index in numpy.random.permutation(xrange(len(self._k_dt[document_index]))):
-                # if this table is not empty, sample the topic assignment of this table
-                if self._n_dt[document_index][table_index] > 0:
-                    old_topic = self._k_dt[document_index][table_index];
+        # compact all the parameters, including removing unused topics and unused tables
+        self.compact_params();
 
-                    # find the index of the words sitting on the current table
-                    selected_word_index = numpy.nonzero(self._t_dv[document_index] == table_index)[0];
-                    # find the frequency distribution of the words sitting on the current table
-                    selected_word_freq_dist = FreqDist([self._corpus[document_index][term] for term in list(selected_word_index)]);
-
-                    # compute the probability of assigning current table every topic
-                    topic_probability = numpy.zeros(self._K + 1);
-                    topic_probability[self._K] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta) - scipy.special.gammaln(self._n_dt[document_index][table_index] + self._vocabulary_size * self._alpha_eta);
-                    for word_id in selected_word_freq_dist.keys():
-                        topic_probability[self._K] += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._alpha_eta) - scipy.special.gammaln(self._alpha_eta);
-                    topic_probability[self._K] += numpy.log(self._alpha_alpha);
-                    
-                    n_k = numpy.sum(self._n_kv, axis=1);
-                    assert(len(n_k) == (self._K))
-                    for topic_index in xrange(self._K):
-                        if topic_index == old_topic:
-                            if self._m_k[topic_index] <= 1:
-                                # if current table is the only table assigned to current topic,
-                                # it means this topic is probably less useful or less generalizable to other documents,
-                                # it makes more sense to collapse this topic and hence assign this table to other topic.
-                                topic_probability[topic_index] = negative_infinity;
-                            else:
-                                # if there are other tables assigned to current topic
-                                topic_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] - self._n_dt[document_index][table_index]) - scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]);
-                                for word_id in selected_word_freq_dist.keys():
-                                    topic_probability[topic_index] += scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta) - scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta - selected_word_freq_dist[word_id]);
-                                # compute the prior if we move this table from this topic
-                                topic_probability[topic_index] += numpy.log(self._m_k[topic_index] - 1);
-                        else:
-                            topic_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]) - scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] + self._n_dt[document_index][table_index]);
-                            for word_id in selected_word_freq_dist.keys():
-                                topic_probability[topic_index] += scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta + selected_word_freq_dist[word_id]) - scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta);
-                            topic_probability[topic_index] += numpy.log(self._m_k[topic_index]);
-
-                    # normalize the distribution and sample new topic assignment for this topic
-                    #topic_probability = numpy.exp(topic_probability);
-                    #topic_probability = topic_probability/numpy.sum(topic_probability);
-                    #topic_probability = numpy.exp(log_normalize(topic_probability));
-                    topic_probability -= scipy.misc.logsumexp(topic_probability);
-                    topic_probability = numpy.exp(topic_probability);
-                    
-                    cdf = numpy.cumsum(topic_probability);
-                    new_topic = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
-                    
-                    # if the table is assigned to a new topic
-                    if new_topic != old_topic:
-                        # assign this table to new topic
-                        self._k_dt[document_index][table_index] = new_topic;
-                        
-                        # if this table starts a new topic, expand all matrix
-                        if new_topic == self._K:
-                            self._K += 1;
-                            #self._n_dk = numpy.vstack((self._n_dk, numpy.zeros((1, self._D))));
-                            #assert(self._n_dk.shape == (self._K, self._D));
-                            self._n_dk = numpy.hstack((self._n_dk, numpy.zeros((self._D, 1))));
-                            assert(self._n_dk.shape == (self._D, self._K));
-                            
-                            self._n_kv = numpy.vstack((self._n_kv, numpy.zeros((1, self._vocabulary_size))));
-                            assert(self._n_kv.shape == (self._K, self._vocabulary_size));
-                            self._m_k = numpy.hstack((self._m_k, numpy.zeros(1)));
-                            assert(len(self._m_k) == self._K);
-                            
-                        # adjust the statistics of all model parameter
-                        self._m_k[old_topic] -= 1;
-                        self._m_k[new_topic] += 1;
-                        self._n_dk[document_index, old_topic] -= self._n_dt[document_index][table_index];
-                        self._n_dk[document_index, new_topic] += self._n_dt[document_index][table_index];
-                        for word_id in selected_word_freq_dist.keys():
-                            self._n_kv[old_topic, word_id] -= selected_word_freq_dist[word_id];
-                            assert(self._n_kv[old_topic, word_id] >= 0)
-                            self._n_kv[new_topic, word_id] += selected_word_freq_dist[word_id];
-            '''
+    def split_merge(self):
+        for iteration in xrange(self._split_merge_iteration):
+            document_pos_1 = numpy.random.randint(0, self._D);
+            document_pos_2 = numpy.random.randint(0, self._D);
             
+            if self._split_merge_heuristics == 1:
+                word_pos_1 = numpy.random.randint(0, len(self._corpus[document_pos_1]));
+                random_label_1 = self._k_dt[document_pos_1][self._t_dv[document_pos_1][word_pos_1]];
+                word_pos_2 = numpy.random.randint(0, len(self._corpus[document_pos_2]));
+                random_label_2 = self._k_dt[document_pos_2][self._t_dv[document_pos_2][word_pos_2]];
+            elif self._split_merge_heuristics == 2:
+                table_pos_1 = numpy.random.randint(0, len(self._k_dt[document_pos_1]));
+                random_label_1 = self._k_dt[document_pos_1][table_pos_1];
+                table_pos_2 = numpy.random.randint(0, len(self._k_dt[document_pos_2]));
+                random_label_2 = self._k_dt[document_pos_2][table_pos_2];
+            elif self._split_merge_heuristics == 3:
+                random_label_1 = numpy.random.randint(self._K);
+                random_label_2 = numpy.random.randint(self._K);
+            else:
+                sys.stderr.write("error: unrecognized split-merge heuristics %d...\n" % (self._split_merge_heuristics));
+                return;
+        
+            if random_label_1 == random_label_2:
+                self.split_metropolis_hastings(random_label_1);
+            else:
+                self.merge_metropolis_hastings(random_label_1, random_label_2);
+
+    def split_metropolis_hastings(self, cluster_label):
+        # record down the old cluster assignment
+        old_log_posterior = self.log_posterior();
+        initial_count = numpy.copy(self._count);
+        
+        proposed_K = self._K;
+        
+        proposed_n_kv = self._n_kv;
+        proposed_m_k = self._m_k;
+        proposed_n_dk = self._n_dk;
+        proposed_t_dv = self._t_dv;
+        proposed_k_dt = self._k_dt;
+        proposed_n_dt = self._n_dt;
+        
+        #
+        #
+        #
+        #
+        #
+        
+        #
+        #
+        #
+        #
+        #
+        
+        model_parameter = (proposed_label, proposed_K, proposed_count, proposed_mu, proposed_sum, proposed_log_sigma_det, proposed_sigma_inv);
+        
+        if self._split_proposal == 0:
+            # perform random split for split proposal
+            model_parameter = self.random_split(cluster_label, model_parameter);
+            
+            # split a singleton cluster
+            if model_parameter == None:
+                return;
+        elif self._split_proposal == 1:
+            # data_point_indices = numpy.nonzero(proposed_label==cluster_label)[0];
+            
+            # perform restricted gibbs sampling for split proposal
+            model_parameter = self.random_split(cluster_label, model_parameter);
+            # split a singleton cluster
+            if model_parameter == None:
+                return;
+            
+            (proposed_label, proposed_K, proposed_count, proposed_mu, proposed_sum, proposed_log_sigma_det, proposed_sigma_inv) = model_parameter;
+            model_parameter = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter, self._restrict_gibbs_sampling_iteration);
+            (proposed_label, proposed_K, proposed_count, proposed_mu, proposed_sum, proposed_log_sigma_det, proposed_sigma_inv) = model_parameter;
+            
+            if proposed_count[cluster_label] == 0 or proposed_count[proposed_K - 1] == 0:
+                return;
+            
+            self._K = proposed_K
+            self._label = proposed_label;
+            
+            self._count = proposed_count;
+            self._sum = proposed_sum;
+            
+            self._mu = proposed_mu;
+            self._sigma_inv = proposed_sigma_inv;
+            self._log_sigma_det = proposed_log_sigma_det;
+            
+            assert numpy.all(self._count > 0)
+            old_log_posterior = self.log_posterior();
+            
+            model_parameter = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter);
+            
+            if proposed_count[cluster_label] == 0 or proposed_count[proposed_K - 1] == 0:
+                return;
+        elif self._split_proposal == 2:
+            # perform sequential allocation gibbs sampling for split proposal
+            model_parameter = self.sequential_allocation(cluster_label, model_parameter);
+        else:
+            sys.stderr.write("error: unrecognized split proposal strategy %d...\n" % (self._split_proposal));
+        
+        (proposed_label, proposed_K, proposed_count, proposed_mu, proposed_sum, proposed_log_sigma_det, proposed_sigma_inv) = model_parameter;
+        assert numpy.all(proposed_count > 0)
+        
+        log_proposal_probability = (proposed_count[cluster_label] + proposed_count[proposed_K - 1] - 2) * numpy.log(2);
+        
+        # model_parameter = (proposed_label, proposed_K, proposed_count, proposed_mu, proposed_sum, proposed_log_sigma_det, proposed_sigma_inv);
+        new_log_posterior = self.log_posterior(model_parameter);
+        
+        acceptance_log_probability = log_proposal_probability + new_log_posterior - old_log_posterior;
+        acceptance_probability = numpy.exp(acceptance_log_probability);
+        
+        if numpy.random.random() < acceptance_probability:
+            print "split operation granted from %s to %s with acceptance probability %s" % (initial_count, proposed_count, acceptance_probability);
+            
+            self._K = proposed_K
+            self._label = proposed_label;
+            
+            self._count = proposed_count;
+            self._sum = proposed_sum;
+            
+            self._mu = proposed_mu;
+            self._sigma_inv = proposed_sigma_inv;
+            self._log_sigma_det = proposed_log_sigma_det;
+            
+        assert self._count.shape == (self._K,), (self._count.shape, self._K)
+        assert self._sum.shape == (self._K, self._D);
+        assert self._mu.shape == (self._K, self._D);
+        assert self._sigma_inv.shape == (self._K, self._D, self._D);
+        assert self._log_sigma_det.shape == (self._K,);
+        assert numpy.all(self._count > 0);
+
+        return
+
     def sample_tables(self, document_index):
         # sample table assignment, see which topic it should belong to
         for table_index in numpy.random.permutation(xrange(len(self._k_dt[document_index]))):

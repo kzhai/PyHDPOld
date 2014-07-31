@@ -26,17 +26,17 @@ def main():
     
     # Document
     train_docs = [];
-    file = open(os.path.join(input_directory, 'doc.dat'), 'r');
-    for line in file:
-        train_docs.append(line.strip());
+    input_doc_stream = open(os.path.join(input_directory, 'doc.dat'), 'r');
+    for line in input_doc_stream:
+        train_docs.append(line.strip().lower());
     print "successfully load all training documents..."
     
     # Vocabulary
     dictionary_file = os.path.join(input_directory, 'voc.dat');
-    input_file = open(dictionary_file, 'r');
+    input_voc_stream = open(dictionary_file, 'r');
     vocab = [];
-    for line in input_file:
-        vocab.append(line.strip().split()[0]);
+    for line in input_voc_stream:
+        vocab.append(line.strip().lower().split()[0]);
     vocab = list(set(vocab));
     print "successfully load all the words from %s..." % (dictionary_file);
     
@@ -73,7 +73,7 @@ def main():
     output_directory = os.path.join(output_directory, suffix);
     os.mkdir(os.path.abspath(output_directory));
     
-    # store all the options to a file
+    # store all the options to a input_doc_stream
     options_output_file = open(output_directory + "option.txt", 'w');
     # parameter set 1
     options_output_file.write("input_directory=" + input_directory + "\n");

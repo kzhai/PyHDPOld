@@ -88,7 +88,7 @@ def main():
         for token_id in xrange(numpy.random.poisson(number_of_tokens_per_document)):
             topic_id = numpy.nonzero(numpy.random.multinomial(1, gamma))[0][0];
             type_id = numpy.random.randint(0, number_of_types_per_topic);
-            doc.append("K%dV%d" % (topic_id, type_id));
+            doc.append("k%dv%d" % (topic_id, type_id));
         
         output_file_stream.write("%s\n" % (" ".join(doc)));
     output_file_stream.close();
@@ -96,7 +96,7 @@ def main():
     output_file_stream = open(os.path.join(output_directory, "voc.dat"), 'w');
     for topic_id in xrange(number_of_topics):
         for type_id in xrange(number_of_types_per_topic):
-            output_file_stream.write("K%dV%d\n" % (topic_id, type_id));
+            output_file_stream.write("k%dv%d\n" % (topic_id, type_id));
     output_file_stream.close();
         
 if __name__ == '__main__':

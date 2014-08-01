@@ -34,9 +34,19 @@ class MonteCarlo(object):
     """
     def __init__(self,
                  split_merge_heuristics=0,
+                 split_proposal=0,
+                 merge_proposal=0,
+                 split_merge_iteration=1,
+                 restrict_gibbs_sampling_iteration=10,
                  hash_oov_words=False
                  ):
         self._split_merge_heuristics = split_merge_heuristics;
+        self._split_proposal = split_proposal;
+        self._merge_proposal = merge_proposal;
+        
+        self._split_merge_iteration = split_merge_iteration;
+        self._restrict_gibbs_sampling_iteration = restrict_gibbs_sampling_iteration;
+
         self._hash_oov_words = hash_oov_words;
         
     """
@@ -156,7 +166,7 @@ class MonteCarlo(object):
         print "accumulated number of tables:", self._m_k;
         print "accumulated number of tokens:", numpy.sum(self._n_kv, axis=1)[:, numpy.newaxis].T;
         
-        return 0;
+        return self.log_posterior();
 
     """
     sample the data to train the parameters
@@ -287,26 +297,110 @@ class MonteCarlo(object):
                 assert(numpy.all(self._m_k >= 0));
                 assert(numpy.all(self._k_dt[document_index] >= 0));
             
-            self.sample_tables(document_index);
+            # sample table assignment, see which topic it should belong to
+            for table_index in numpy.random.permutation(xrange(len(self._k_dt[document_index]))):
+                self.sample_tables(document_index, table_index);
             
         # compact all the parameters, including removing unused topics and unused tables
         self.compact_params();
 
+    def sample_tables(self, document_index, table_index):
+        # if this table is empty, skip the sampling directly
+        if self._n_dt[document_index][table_index] <= 0:
+            continue;
+            
+        old_topic_id = self._k_dt[document_index][table_index];
+
+        # find the index of the words sitting on the current table
+        selected_word_index = numpy.nonzero(self._t_dv[document_index] == table_index)[0];
+        # find the frequency distribution of the words sitting on the current table
+        selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index][term] for term in list(selected_word_index)]);
+
+        # compute the probability of assigning current table every topic
+        topic_log_probability = numpy.zeros(self._K + 1);
+        
+        topic_log_probability[self._K] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta) - scipy.special.gammaln(self._n_dt[document_index][table_index] + self._vocabulary_size * self._alpha_eta);
+        for word_id in selected_word_freq_dist.keys():
+            topic_log_probability[self._K] += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._alpha_eta) - scipy.special.gammaln(self._alpha_eta);
+        topic_log_probability[self._K] += numpy.log(self._alpha_alpha);
+        
+        n_k = numpy.sum(self._n_kv, axis=1);
+        assert(len(n_k) == (self._K))
+        for topic_index in xrange(self._K):
+            # if current table is the only table assigned to current topic,
+            if self._m_k[topic_index] <= 1:
+                # it means this topic is probably less useful or less generalizable to other documents,
+                # it makes more sense to collapse this topic and hence assign this table to other topic.
+                topic_log_probability[topic_index] = negative_infinity;
+                continue;
+
+            # if there are other tables assigned to current topic
+            if topic_index == old_topic_id:
+                topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] - self._n_dt[document_index][table_index]) - scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]);
+                for word_id in selected_word_freq_dist.keys():
+                    topic_log_probability[topic_index] += scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta) - scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta - selected_word_freq_dist[word_id]);
+                # compute the prior if we move this table from this topic
+                topic_log_probability[topic_index] += numpy.log(self._m_k[topic_index] - 1);
+            else:
+                topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]) - scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] + self._n_dt[document_index][table_index]);
+                for word_id in selected_word_freq_dist.keys():
+                    topic_log_probability[topic_index] += scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta + selected_word_freq_dist[word_id]) - scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta);
+                # compute the prior if we move this table from this topic
+                topic_log_probability[topic_index] += numpy.log(self._m_k[topic_index]);
+
+        # normalize the distribution and sample new topic assignment for this topic
+        # topic_log_probability = numpy.exp(topic_log_probability);
+        # topic_log_probability = topic_log_probability/numpy.sum(topic_log_probability);
+        # topic_log_probability = numpy.exp(log_normalize(topic_log_probability));
+        topic_log_probability -= scipy.misc.logsumexp(topic_log_probability);
+        topic_log_probability = numpy.exp(topic_log_probability);
+        
+        cdf = numpy.cumsum(topic_log_probability);
+        new_topic_id = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
+        
+        if new_topic_id == old_topic_id:
+            continue;
+    
+        # if the table is assigned to a new topic
+        if new_topic_id == self._K:
+            if self._m_k[old_topic_id] <= 1:
+                # if old topic is empty, reuse it
+                new_topic_id = old_topic_id
+            else:
+                # else expand all matrices to fit new topics
+                self._K += 1;
+                self._n_dk = numpy.hstack((self._n_dk, numpy.zeros((self._D, 1))));
+                assert(self._n_dk.shape == (self._D, self._K));
+                
+                self._n_kv = numpy.vstack((self._n_kv, numpy.zeros((1, self._vocabulary_size))));
+                assert(self._n_kv.shape == (self._K, self._vocabulary_size));
+                self._m_k = numpy.hstack((self._m_k, numpy.zeros(1)));
+                assert(len(self._m_k) == self._K);
+            
+        # assign this table to new topic
+        self._k_dt[document_index][table_index] = new_topic_id;                
+        
+        # adjust the statistics of all model parameter
+        self._m_k[old_topic_id] -= 1;
+        self._m_k[new_topic_id] += 1;
+        self._n_dk[document_index, old_topic_id] -= self._n_dt[document_index][table_index];
+        self._n_dk[document_index, new_topic_id] += self._n_dt[document_index][table_index];
+        for word_id in selected_word_freq_dist.keys():
+            self._n_kv[old_topic_id, word_id] -= selected_word_freq_dist[word_id];
+            assert(self._n_kv[old_topic_id, word_id] >= 0)
+            self._n_kv[new_topic_id, word_id] += selected_word_freq_dist[word_id];
+
     def split_merge(self):
         for iteration in xrange(self._split_merge_iteration):
-            document_pos_1 = numpy.random.randint(0, self._D);
-            document_pos_2 = numpy.random.randint(0, self._D);
-            
             if self._split_merge_heuristics == 1:
-                word_pos_1 = numpy.random.randint(0, len(self._corpus[document_pos_1]));
-                random_label_1 = self._k_dt[document_pos_1][self._t_dv[document_pos_1][word_pos_1]];
-                word_pos_2 = numpy.random.randint(0, len(self._corpus[document_pos_2]));
-                random_label_2 = self._k_dt[document_pos_2][self._t_dv[document_pos_2][word_pos_2]];
+                temp_cluster_probability = numpy.random.multinomial(1, self._m_k)[numpy.newaxis, :];
+                random_label_1 = numpy.nonzero(temp_cluster_probability == 1)[1][0];
+                temp_cluster_probability = numpy.random.multinomial(1, self._m_k)[numpy.newaxis, :];
+                random_label_2 = numpy.nonzero(temp_cluster_probability == 1)[1][0];
             elif self._split_merge_heuristics == 2:
-                table_pos_1 = numpy.random.randint(0, len(self._k_dt[document_pos_1]));
-                random_label_1 = self._k_dt[document_pos_1][table_pos_1];
-                table_pos_2 = numpy.random.randint(0, len(self._k_dt[document_pos_2]));
-                random_label_2 = self._k_dt[document_pos_2][table_pos_2];
+                temp_cluster_probability = numpy.random.multinomial(1, self._m_k)[numpy.newaxis, :];
+                random_label_1 = numpy.nonzero(temp_cluster_probability == 1)[1][0];
+                random_label_2 = numpy.random.randint(self._K);
             elif self._split_merge_heuristics == 3:
                 random_label_1 = numpy.random.randint(self._K);
                 random_label_2 = numpy.random.randint(self._K);
@@ -339,19 +433,60 @@ class MonteCarlo(object):
         if self._split_proposal == 0:
             # perform random split for split proposal
             model_parameter = self.random_split(cluster_label, model_parameter);
-            
+            if model_parameter == None:
+                return;
+        
+            (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
+            log_proposal_probability = (proposed_m_k[cluster_label] + proposed_m_k[proposed_K - 1] - 2) * numpy.log(2);
+        elif self._split_proposal == 1:
+            # perform restricted gibbs sampling for split proposal
+            model_parameter = self.random_split(cluster_label, model_parameter);
             # split a singleton cluster
             if model_parameter == None:
-                return;        
+                return;
+            
+            model_parameter, transition_log_probability = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter, self._restrict_gibbs_sampling_iteration+1);
+            
+            (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
+            
+            log_proposal_probability = transition_log_probability;            
+            
+            '''
+            model_parameter, transition_log_probability = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter, self._restrict_gibbs_sampling_iteration);
+            if model_parameter == None:
+                return;
+            
+            (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
+                        
+            self._K = proposed_K
+            
+            self._n_kv = proposed_n_kv;
+            self._m_k = proposed_m_k;
+            self._n_dk = proposed_n_dk;
+            
+            self._n_dt = proposed_n_dt;
+            self._t_dv = proposed_t_dv;
+            self._k_dt = proposed_k_dt;
+            
+            old_log_posterior = self.log_posterior();
+            
+            model_parameter, transition_log_probability = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter);
+            if model_parameter == None:
+                return;
+            
+            log_proposal_probability = transition_log_probability;
+            '''
+        elif self._split_proposal == 3:
+            pass;
+        else:
+            pass        
         
         new_log_posterior = self.log_posterior(model_parameter);
         
-        (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
-        
-        log_proposal_probability = (proposed_m_k[cluster_label] + proposed_m_k[proposed_K - 1] - 2) * numpy.log(2);
-        
         acceptance_log_probability = log_proposal_probability + new_log_posterior - old_log_posterior;
         acceptance_probability = numpy.exp(acceptance_log_probability);
+        
+        (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
         
         if numpy.random.random() < acceptance_probability:
             print "split operation granted from %s to %s with acceptance probability %s" % (self._m_k, proposed_m_k, acceptance_probability);
@@ -463,11 +598,106 @@ class MonteCarlo(object):
                 
         if proposed_m_k[component_index] == 0 or proposed_m_k[proposed_K - 1] == 0:
             return None;
+        else:
+            model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
+            return model_parameter
 
-        model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
+    def restrict_gibbs_sampling(self, cluster_index_1, cluster_index_2, model_parameter, restricted_gibbs_sampling_iteration=1):
+        (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
+
+        document_table_indices = [];
+        for document_index in xrange(self._D):
+            for table_index in xrange(len(proposed_k_dt[document_index])):
+                if proposed_k_dt[document_index][table_index] == cluster_index_1 or proposed_k_dt[document_index][table_index] == cluster_index_2:
+                    document_table_indices.append((document_index, table_index));
+                    
+                if len(document_table_indices) == proposed_m_k[cluster_index_1] + proposed_m_k[cluster_index_2]:
+                    break;
+            if len(document_table_indices) == proposed_m_k[cluster_index_1] + proposed_m_k[cluster_index_2]:
+                    break;
+                
+        assert len(document_table_indices) == proposed_m_k[cluster_index_1] + proposed_m_k[cluster_index_2];
         
-        return model_parameter
-
+        for restricted_gibbs_sampling_iteration_index in xrange(restricted_gibbs_sampling_iteration):
+            transition_log_probability = 0;
+            for (document_index, table_index) in numpy.random.permutation(document_table_indices):
+                current_topic_id = proposed_k_dt[document_index][table_index];
+                
+                if current_topic_id == cluster_index_1:
+                    other_topic_id = cluster_index_2;
+                elif current_topic_id == cluster_index_2:
+                    other_topic_id = cluster_index_1;
+                else:
+                    sys.stderr.write("error: table does not belong to proposed split clusters...\n");
+        
+                # find the index of the words sitting on the current table
+                selected_word_index = numpy.nonzero(proposed_t_dv[document_index] == table_index)[0];
+                # find the frequency distribution of the words sitting on the current table
+                selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index][term] for term in list(selected_word_index)]);
+        
+                n_k = numpy.sum(proposed_n_kv, axis=1);
+                
+                if proposed_m_k[current_topic_id] <= 1:
+                    # if current table is the only table assigned to current topic,
+                    current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
+                    current_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + proposed_n_dt[document_index][table_index]);
+                    for word_id in selected_word_freq_dist.keys():
+                        current_topic_probability += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._alpha_eta)
+                        current_topic_probability -= scipy.special.gammaln(self._alpha_eta);
+                    current_topic_probability += numpy.log(self._alpha_alpha);
+                else:
+                    # if there are other tables assigned to current topic
+                    current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[current_topic_id] - proposed_n_dt[document_index][table_index])
+                    current_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[current_topic_id]);
+                    for word_id in selected_word_freq_dist.keys():
+                        current_topic_probability += scipy.special.gammaln(proposed_n_kv[current_topic_id, word_id] + self._alpha_eta); 
+                        current_topic_probability -= scipy.special.gammaln(proposed_n_kv[current_topic_id, word_id] + self._alpha_eta - selected_word_freq_dist[word_id]);
+                    # compute the prior if we move this table from this topic
+                    current_topic_probability += numpy.log(proposed_m_k[current_topic_id] - 1);
+                
+                if proposed_m_k[other_topic_id] <= 0:
+                    # if current table is the only table assigned to current topic,
+                    other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
+                    other_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + proposed_n_dt[document_index][table_index]);
+                    for word_id in selected_word_freq_dist.keys():
+                        other_topic_probability += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._alpha_eta)
+                        other_topic_probability -= scipy.special.gammaln(self._alpha_eta);
+                    other_topic_probability += numpy.log(self._alpha_alpha);
+                else:
+                    other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[other_topic_id]);
+                    other_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[other_topic_id] + proposed_n_dt[document_index][table_index]);
+                    for word_id in selected_word_freq_dist.keys():
+                        other_topic_probability += scipy.special.gammaln(proposed_n_kv[other_topic_id, word_id] + self._alpha_eta + selected_word_freq_dist[word_id]);
+                        other_topic_probability -= scipy.special.gammaln(proposed_n_kv[other_topic_id, word_id] + self._alpha_eta);
+                    other_topic_probability += numpy.log(proposed_m_k[other_topic_id]);
+                    
+                # sample a new cluster label for current point
+                ratio_current_over_other = numpy.exp(current_topic_probability - other_topic_probability);
+                probability_other_topic = 1. / (1. + ratio_current_over_other);
+                
+                # if this table does not change topic assignment
+                if numpy.random.random() > probability_other_topic:
+                    transition_log_probability += numpy.log(1-probability_other_topic);
+                    continue;
+                
+                transition_log_probability += numpy.log(probability_other_topic);
+                
+                # assign this table to new topic
+                proposed_k_dt[document_index][table_index] = other_topic_id;
+                
+                # adjust the statistics of all model parameter
+                proposed_m_k[current_topic_id] -= 1;
+                proposed_m_k[other_topic_id] += 1;
+                proposed_n_dk[document_index, current_topic_id] -= proposed_n_dt[document_index][table_index];
+                proposed_n_dk[document_index, other_topic_id] += proposed_n_dt[document_index][table_index];
+                for word_id in selected_word_freq_dist.keys():
+                    proposed_n_kv[current_topic_id, word_id] -= selected_word_freq_dist[word_id];
+                    assert(proposed_n_kv[current_topic_id, word_id] >= 0)
+                    proposed_n_kv[other_topic_id, word_id] += selected_word_freq_dist[word_id];
+                    
+        model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
+        return model_parameter, transition_log_probability;
+        
     def merge_metropolis_hastings(self, component_index_1, component_index_2):
         old_log_posterior = self.log_posterior();
         
@@ -621,8 +851,8 @@ class MonteCarlo(object):
         # sample the data points set
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
         
-        if component_index_2==proposed_K-1:
-            number_of_unvisited_target_tables = proposed_m_k[component_index_2] + proposed_m_k[proposed_K-1];
+        if component_index_2 == proposed_K - 1:
+            number_of_unvisited_target_tables = proposed_m_k[component_index_2] + proposed_m_k[proposed_K - 1];
         else:
             number_of_unvisited_target_tables = proposed_m_k[component_index_2];
         
@@ -633,7 +863,7 @@ class MonteCarlo(object):
                     proposed_k_dt[document_index][table_index] = component_index_1;
                     number_of_unvisited_target_tables -= 1;
                 
-                if proposed_k_dt[document_index][table_index] == proposed_K-1:
+                if proposed_k_dt[document_index][table_index] == proposed_K - 1:
                     # shift the very last component to component_index_2
                     proposed_k_dt[document_index][table_index] = component_index_2;
                     number_of_unvisited_target_tables -= 1;
@@ -664,90 +894,7 @@ class MonteCarlo(object):
         
         return model_parameter;
 
-    def sample_tables(self, document_index):
-        # sample table assignment, see which topic it should belong to
-        for table_id in numpy.random.permutation(xrange(len(self._k_dt[document_index]))):
-            # if this table is not empty, sample the topic assignment of this table
-            if self._n_dt[document_index][table_id] <= 0:
-                continue;
-                
-            old_topic_id = self._k_dt[document_index][table_id];
 
-            # find the index of the words sitting on the current table
-            selected_word_index = numpy.nonzero(self._t_dv[document_index] == table_id)[0];
-            # find the frequency distribution of the words sitting on the current table
-            selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index][term] for term in list(selected_word_index)]);
-
-            # compute the probability of assigning current table every topic
-            topic_log_probability = numpy.zeros(self._K + 1);
-            topic_log_probability[self._K] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta) - scipy.special.gammaln(self._n_dt[document_index][table_id] + self._vocabulary_size * self._alpha_eta);
-            for word_id in selected_word_freq_dist.keys():
-                topic_log_probability[self._K] += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._alpha_eta) - scipy.special.gammaln(self._alpha_eta);
-            topic_log_probability[self._K] += numpy.log(self._alpha_alpha);
-            
-            n_k = numpy.sum(self._n_kv, axis=1);
-            assert(len(n_k) == (self._K))
-            for topic_index in xrange(self._K):
-                if topic_index == old_topic_id:
-                    if self._m_k[topic_index] <= 1:
-                        # if current table is the only table assigned to current topic,
-                        # it means this topic is probably less useful or less generalizable to other documents,
-                        # it makes more sense to collapse this topic and hence assign this table to other topic.
-                        topic_log_probability[topic_index] = negative_infinity;
-                    else:
-                        # if there are other tables assigned to current topic
-                        topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] - self._n_dt[document_index][table_id]) - scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]);
-                        for word_id in selected_word_freq_dist.keys():
-                            topic_log_probability[topic_index] += scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta) - scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta - selected_word_freq_dist[word_id]);
-                        # compute the prior if we move this table from this topic
-                        topic_log_probability[topic_index] += numpy.log(self._m_k[topic_index] - 1);
-                else:
-                    topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]) - scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] + self._n_dt[document_index][table_id]);
-                    for word_id in selected_word_freq_dist.keys():
-                        topic_log_probability[topic_index] += scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta + selected_word_freq_dist[word_id]) - scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta);
-                    topic_log_probability[topic_index] += numpy.log(self._m_k[topic_index]);
-
-            # normalize the distribution and sample new topic assignment for this topic
-            # topic_log_probability = numpy.exp(topic_log_probability);
-            # topic_log_probability = topic_log_probability/numpy.sum(topic_log_probability);
-            # topic_log_probability = numpy.exp(log_normalize(topic_log_probability));
-            topic_log_probability -= scipy.misc.logsumexp(topic_log_probability);
-            topic_log_probability = numpy.exp(topic_log_probability);
-            
-            cdf = numpy.cumsum(topic_log_probability);
-            new_topic_id = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
-            
-            if new_topic_id == old_topic_id:
-                continue;
-        
-            # if the table is assigned to a new topic
-            if new_topic_id == self._K:
-                if self._m_k[old_topic_id] <= 1:
-                    # if old topic is empty, reuse it
-                    new_topic_id = old_topic_id
-                else:
-                    # else expand all matrices to fit new topics
-                    self._K += 1;
-                    self._n_dk = numpy.hstack((self._n_dk, numpy.zeros((self._D, 1))));
-                    assert(self._n_dk.shape == (self._D, self._K));
-                    
-                    self._n_kv = numpy.vstack((self._n_kv, numpy.zeros((1, self._vocabulary_size))));
-                    assert(self._n_kv.shape == (self._K, self._vocabulary_size));
-                    self._m_k = numpy.hstack((self._m_k, numpy.zeros(1)));
-                    assert(len(self._m_k) == self._K);
-                
-            # assign this table to new topic
-            self._k_dt[document_index][table_id] = new_topic_id;                
-            
-            # adjust the statistics of all model parameter
-            self._m_k[old_topic_id] -= 1;
-            self._m_k[new_topic_id] += 1;
-            self._n_dk[document_index, old_topic_id] -= self._n_dt[document_index][table_id];
-            self._n_dk[document_index, new_topic_id] += self._n_dt[document_index][table_id];
-            for word_id in selected_word_freq_dist.keys():
-                self._n_kv[old_topic_id, word_id] -= selected_word_freq_dist[word_id];
-                assert(self._n_kv[old_topic_id, word_id] >= 0)
-                self._n_kv[new_topic_id, word_id] += selected_word_freq_dist[word_id];
     
     '''
     def sample_topics(self):
@@ -897,9 +1044,6 @@ class MonteCarlo(object):
             print "topic merging probability of topic %d: %s" % (topic_id, topic_probability);
             cdf = numpy.cumsum(topic_probability);
             new_topic = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
-            
-            # test_log_probability -= scipy.misc.logsumexp(test_log_probability);
-            # print "test_log_probability:", numpy.exp(test_log_probability);
             
             # if the entire topic is assigned to a new topic
             if new_topic != topic_id:

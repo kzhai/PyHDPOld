@@ -99,6 +99,10 @@ def main():
     options_output_file.write("snapshot_interval=%d\n" % snapshot_interval);
     options_output_file.write("resample_topics=%s\n" % resample_topics);
     options_output_file.write("hash_oov_words=%s\n" % hash_oov_words);
+    # parameter set 4
+    options_output_file.write("split_merge_heuristics=%d\n" % split_merge_heuristics);
+    options_output_file.write("split_proposal=%d\n" % split_proposal);
+    options_output_file.write("merge_proposal=%d\n" % merge_proposal);
     options_output_file.close()
     
     print "========== ========== ========== ========== =========="
@@ -116,10 +120,14 @@ def main():
     print "snapshot_interval=%d" % (snapshot_interval);
     print "resample_topics=%s" % (resample_topics)
     print "hash_oov_words=%s" % (hash_oov_words)
+    # parameter set 4
+    print "split_merge_heuristics=%d" % (split_merge_heuristics)
+    print "split_proposal=%d" % split_proposal;
+    print "merge_proposal=%d" % merge_proposal;
     print "========== ========== ========== ========== =========="
     
     import monte_carlo;
-    hdp = monte_carlo.MonteCarlo(resample_topics, hash_oov_words);
+    hdp = monte_carlo.MonteCarlo(split_merge_heuristics, split_proposal, merge_proposal);
     hdp._initialize(train_docs, vocab, alpha_alpha, alpha_gamma, alpha_eta)
     
     for iteration in xrange(training_iterations):

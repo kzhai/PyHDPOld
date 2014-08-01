@@ -153,8 +153,6 @@ class MonteCarlo(object):
         if self._split_merge_heuristics > 0:
             self.sample_topics();
     
-        
-        
         print "accumulated number of tables:", self._m_k;
         print "accumulated number of tokens:", numpy.sum(self._n_kv, axis=1)[:, numpy.newaxis].T;
         
@@ -375,6 +373,7 @@ class MonteCarlo(object):
         #
         #
         
+        '''
         if self._split_proposal == 1:
             # data_point_indices = numpy.nonzero(proposed_label==cluster_label)[0];
             
@@ -413,6 +412,61 @@ class MonteCarlo(object):
             model_parameter = self.sequential_allocation(cluster_label, model_parameter);
         else:
             sys.stderr.write("error: unrecognized split proposal strategy %d...\n" % (self._split_proposal));
+        '''
+
+    def random_split(self, component_index, model_parameter):
+        # sample the data points set
+        (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
+
+        if proposed_m_k[component_index] <= 1:
+            return None;
+        
+        number_of_unvisited_target_tables = proposed_m_k[component_index];
+        
+        proposed_K += 1;
+        
+        proposed_n_dk = numpy.hstack((proposed_n_dk, numpy.zeros((self._D, 1))));
+        assert(proposed_n_dk.shape == (self._D, proposed_K));
+                    
+        proposed_n_kv = numpy.vstack((proposed_n_kv, numpy.zeros((1, self._vocabulary_size))));
+        assert(proposed_n_kv.shape == (proposed_K, self._vocabulary_size));
+
+        proposed_m_k = numpy.hstack((proposed_m_k, numpy.zeros(1)));
+        assert(len(proposed_m_k) == proposed_K);
+
+        for document_index in numpy.random.permutation(xrange(self._D)):
+            for table_index in numpy.random.permutation(xrange(len(proposed_k_dt[document_index]))):
+                if proposed_k_dt[document_index][table_index] != component_index:
+                    continue;
+                
+                if numpy.random.random() < 0.5:
+                    proposed_k_dt[document_index][table_index] = proposed_K - 1;
+                    
+                    proposed_m_k[component_index] -= 1;
+                    proposed_m_k[proposed_K - 1] += 1;
+                    
+                    proposed_n_dk[document_index, component_index] -= proposed_n_dt[table_index];
+                    proposed_n_dk[document_index, proposed_K - 1] += proposed_n_dt[table_index];
+                    
+                    selected_word_index = numpy.nonzero(proposed_t_dv[document_index] == table_index)[0];
+                    for word_index in selected_word_index:
+                        proposed_n_kv[component_index, word_index] -= 1;
+                        proposed_n_kv[proposed_K - 1, word_index] += 1;
+
+                number_of_unvisited_target_tables -= 1;
+                
+                if number_of_unvisited_target_tables == 0:
+                    break;
+                
+            if number_of_unvisited_target_tables == 0:
+                    break;
+                
+        if proposed_m_k[component_index] == 0 or proposed_m_k[proposed_K - 1] == 0:
+            return None;
+
+        model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
+        
+        return model_parameter
 
     def merge_metropolis_hastings(self, component_index_1, component_index_2):
         old_log_posterior = self.log_posterior();
@@ -469,7 +523,7 @@ class MonteCarlo(object):
         #
         #
         #
-            
+        '''
         if self._merge_proposal == 1:
             # perform restricted gibbs sampling for merge proposal
             # (proposed_label, proposed_K, proposed_count, proposed_mu, proposed_sum, proposed_log_sigma_det, proposed_sigma_inv) = model_parameter;
@@ -559,60 +613,7 @@ class MonteCarlo(object):
         assert self._mu.shape == (self._K, self._D);
         assert self._sigma_inv.shape == (self._K, self._D, self._D);
         assert self._log_sigma_det.shape == (self._K,);
-
-    def random_split(self, component_index, model_parameter):
-        # sample the data points set
-        (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
-
-        if proposed_m_k[component_index] <= 1:
-            return None;
-        
-        number_of_unvisited_target_tables = proposed_m_k[component_index];
-        
-        proposed_K += 1;
-        
-        proposed_n_dk = numpy.hstack((proposed_n_dk, numpy.zeros((self._D, 1))));
-        assert(proposed_n_dk.shape == (self._D, proposed_K));
-                    
-        proposed_n_kv = numpy.vstack((proposed_n_kv, numpy.zeros((1, self._vocabulary_size))));
-        assert(proposed_n_kv.shape == (proposed_K, self._vocabulary_size));
-
-        proposed_m_k = numpy.hstack((proposed_m_k, numpy.zeros(1)));
-        assert(len(proposed_m_k) == proposed_K);
-
-        for document_index in numpy.random.permutation(xrange(self._D)):
-            for table_index in numpy.random.permutation(xrange(len(proposed_k_dt[document_index]))):
-                if proposed_k_dt[document_index][table_index] != component_index:
-                    continue;
-                
-                if numpy.random.random() < 0.5:
-                    proposed_k_dt[document_index][table_index] = proposed_K - 1;
-                    
-                    proposed_m_k[component_index] -= 1;
-                    proposed_m_k[proposed_K - 1] += 1;
-                    
-                    proposed_n_dk[document_index, component_index] -= proposed_n_dt[table_index];
-                    proposed_n_dk[document_index, proposed_K - 1] += proposed_n_dt[table_index];
-                    
-                    selected_word_index = numpy.nonzero(proposed_t_dv[document_index] == table_index)[0];
-                    for word_index in selected_word_index:
-                        proposed_n_kv[component_index, word_index] -= 1;
-                        proposed_n_kv[proposed_K - 1, word_index] += 1;
-
-                number_of_unvisited_target_tables -= 1;
-                
-                if number_of_unvisited_target_tables == 0:
-                    break;
-                
-            if number_of_unvisited_target_tables == 0:
-                    break;
-                
-        if proposed_m_k[component_index] == 0 or proposed_m_k[proposed_K - 1] == 0:
-            return None;
-
-        model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-        
-        return model_parameter
+        '''
 
     def random_merge(self, component_index_1, component_index_2, model_parameter):
         assert component_index_2 > component_index_1;
@@ -967,43 +968,8 @@ class MonteCarlo(object):
         # compute the word level log likelihood
         log_posterior += self.word_log_likelihood(model_parameter);
         
-        #
-        #
-        #
-        #
-        #
-
-        # log likelihood probability
-        for n in xrange(self._N):
-            log_posterior -= 0.5 * self._D * numpy.log(2.0 * numpy.pi) + 0.5 * log_sigma_det[label[n]];
-            mean_offset = self._X[n, :][numpy.newaxis, :] - mu[label[n], :]
-            assert(mean_offset.shape == (1, self._D));
-            log_posterior -= 0.5 * numpy.dot(numpy.dot(mean_offset, sigma_inv[label[n], :, :]), mean_offset.transpose());
-        
-        # log prior probability
-        log_posterior += K * numpy.log(self._alpha_alpha);
-        log_posterior += numpy.sum(scipy.special.gammaln(count));
-        log_posterior -= scipy.special.gammaln(self._N + self._alpha_alpha)
-        log_posterior += scipy.special.gammaln(self._alpha_alpha);
-        
         return log_posterior;
 
-    """
-    compute the log likelihood of the model
-    """
-    def log_likelihood(self):
-        log_likelihood = 0.;
-        # compute the document level log likelihood
-        log_likelihood += self.table_log_likelihood();
-        # compute the table level log likelihood
-        log_likelihood += self.topic_log_likelihood();
-        # compute the word level log likelihood
-        log_likelihood += self.word_log_likelihood();
-        
-        # todo: add in the likelihood for hyper-parameter
-        
-        return log_likelihood
-        
     """
     compute the word level log likelihood p(x | t, k) = \prod_{k=1}^K f(x_{ij} | z_{ij}=k), where f(x_{ij} | z_{ij}=k) = \frac{\Gamma(V \eta)}{\Gamma(n_k + V \eta)} \frac{\prod_{v} \Gamma(n_{k}^{v} + \eta)}{\Gamma^V(\eta)}
     """

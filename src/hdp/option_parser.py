@@ -19,6 +19,11 @@ def parse_args():
                         snapshot_interval=100,
                         resample_topics=False,
                         hash_oov_words=False,
+                        
+                        # parameter set 4
+                        split_proposal=0,
+                        merge_proposal=0,
+                        split_merge_heuristics=0,
                         )
     # parameter set 1
     parser.add_option("--input_directory", type="string", dest="input_directory",
@@ -45,6 +50,28 @@ def parse_args():
                       help="resample topics [False]")
     parser.add_option("--hash_oov_words", action="store_true", dest="hash_oov_words",
                       help="hash out-of-vocabulary words to run this model in pseudo infinite vocabulary mode [False]")
-                      
+    
+    # parameter set 4
+    parser.add_option("--merge_proposal", type="int", dest="merge_proposal",
+                      help="propose merge operation via [ " + 
+                            "0 (default): metropolis-hastings, " + 
+                            "1: restricted gibbs sampler and metropolis-hastings, " + 
+                            "2: gibbs sampler and metropolis-hastings " + 
+                            "]")
+    parser.add_option("--split_proposal", type="int", dest="split_proposal",
+                      help="propose split operation via [ " + 
+                            "0 (default): metropolis-hastings, " + 
+                            "1: restricted gibbs sampler and metropolis-hastings, " + 
+                            "2: sequential allocation and metropolis-hastings " + 
+                            "]")    
+    parser.add_option("--split_merge_heuristics", type="int", dest="split_merge_heuristics",
+                      help="split-merge heuristics [ " + 
+                            "0 (default): no split-merge operation, " + 
+                            "1: random choose candidate clusters by points, " + 
+                            "2: random choose candidate clusters by point-cluster, " + 
+                            "3: random choose candidate clusters by clusters, " +
+                            "4: component resampling " +
+                            "]")
+    
     (options, args) = parser.parse_args();
     return options;

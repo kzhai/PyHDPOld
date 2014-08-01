@@ -54,6 +54,12 @@ def main():
         training_iterations=options.training_iterations;
     if options.snapshot_interval>0:
         snapshot_interval=options.snapshot_interval;
+        
+    # parameter set 4
+    split_merge_heuristics = options.split_merge_heuristics;
+    split_proposal = options.split_proposal;
+    merge_proposal = options.merge_proposal;
+    
     resample_topics = options.resample_topics;
     hash_oov_words = options.hash_oov_words;
     
@@ -66,6 +72,11 @@ def main():
     suffix += "-aa%g" % (alpha_alpha);
     suffix += "-ag%g" % (alpha_gamma);
     suffix += "-ae%g" % (alpha_eta);
+    
+    suffix += "-smh%d" % (split_merge_heuristics);
+    suffix += "-sp%d" % (split_proposal);
+    suffix += "-mp%d" % (merge_proposal);
+    
     suffix += "-%s" % (resample_topics);
     suffix += "-%s" % (hash_oov_words);
     suffix += "/";

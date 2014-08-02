@@ -449,6 +449,9 @@ class MonteCarlo(object):
             
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             
+            if proposed_m_k[cluster_label] == 0 or proposed_m_k[proposed_K - 1] == 0:
+                return;
+            
             log_proposal_probability = transition_log_probability;
         elif self._split_proposal == 2:
             pass;
@@ -706,6 +709,7 @@ class MonteCarlo(object):
             model_parameter, transition_log_probability = self.restrict_gibbs_sampling(component_index_1, component_index_2, model_parameter, self._restrict_gibbs_sampling_iteration + 1);
             
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
+            assert numpy.all(proposed_m_k>=0);
             
             if proposed_m_k[component_index_1] == 0 or proposed_m_k[component_index_2] == 0:
                 print "merge cluster %d and %d during restricted gibbs sampling step..." % (component_index_1, component_index_2);
@@ -727,26 +731,21 @@ class MonteCarlo(object):
                 proposed_n_kv = numpy.delete(proposed_n_kv, [proposed_K - 1], axis=0);
                 proposed_m_k = numpy.delete(proposed_m_k, [proposed_K - 1], axis=0);
                 proposed_n_dk = numpy.delete(proposed_n_dk, [proposed_K - 1], axis=1);
-                
-                proposed_count = numpy.delete(proposed_count, [proposed_K - 1], axis=0);
-                proposed_sum = numpy.delete(proposed_sum, [proposed_K - 1], axis=0);
-                proposed_mu = numpy.delete(proposed_mu, [proposed_K - 1], axis=0);
-                proposed_sigma_inv = numpy.delete(proposed_sigma_inv, [proposed_K - 1], axis=0);
-                proposed_log_sigma_det = numpy.delete(proposed_log_sigma_det, [proposed_K - 1], axis=0);
                 proposed_K -= 1;
                 
-                self._K = proposed_K
-                self._label = proposed_label;
+                self._K = proposed_K;
+            
+                self._n_kv = proposed_n_kv;
+                self._m_k = proposed_m_k;
+                self._n_dk = proposed_n_dk;
                 
-                self._count = proposed_count;
-                self._sum = proposed_sum;
+                self._n_dt = proposed_n_dt;
                 
-                self._mu = proposed_mu;
-                self._sigma_inv = proposed_sigma_inv;
-                self._log_sigma_det = proposed_log_sigma_det;
+                self._t_dv = proposed_t_dv;
+                self._k_dt = proposed_k_dt;
                 
                 assert numpy.all(self._count > 0)
-                    
+                
                 return;
             
             log_proposal_probability = transition_log_probability;            

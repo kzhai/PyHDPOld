@@ -445,38 +445,12 @@ class MonteCarlo(object):
             if model_parameter == None:
                 return;
             
-            model_parameter, transition_log_probability = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter, self._restrict_gibbs_sampling_iteration+1);
+            model_parameter, transition_log_probability = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter, self._restrict_gibbs_sampling_iteration + 1);
             
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
-            
-            log_proposal_probability = transition_log_probability;            
-            
-            '''
-            model_parameter, transition_log_probability = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter, self._restrict_gibbs_sampling_iteration);
-            if model_parameter == None:
-                return;
-            
-            (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
-                        
-            self._K = proposed_K
-            
-            self._n_kv = proposed_n_kv;
-            self._m_k = proposed_m_k;
-            self._n_dk = proposed_n_dk;
-            
-            self._n_dt = proposed_n_dt;
-            self._t_dv = proposed_t_dv;
-            self._k_dt = proposed_k_dt;
-            
-            old_log_posterior = self.log_posterior();
-            
-            model_parameter, transition_log_probability = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter);
-            if model_parameter == None:
-                return;
             
             log_proposal_probability = transition_log_probability;
-            '''
-        elif self._split_proposal == 3:
+        elif self._split_proposal == 2:
             pass;
         else:
             pass        
@@ -677,7 +651,7 @@ class MonteCarlo(object):
                 
                 # if this table does not change topic assignment
                 if numpy.random.random() > probability_other_topic:
-                    transition_log_probability += numpy.log(1-probability_other_topic);
+                    transition_log_probability += numpy.log(1 - probability_other_topic);
                     continue;
                 
                 transition_log_probability += numpy.log(probability_other_topic);
@@ -723,15 +697,70 @@ class MonteCarlo(object):
         if self._merge_proposal == 0:            
             # perform random merge for merge proposal
             model_parameter = self.random_merge(component_index_1, component_index_2, model_parameter);
-        
+            
+            (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
+            
+            log_proposal_probability = -(proposed_m_k[component_index_1] - 2) * numpy.log(2);
+        elif self._merge_proposal == 1:
+            # perform restricted gibbs sampling for merge proposal
+            model_parameter, transition_log_probability = self.restrict_gibbs_sampling(component_index_1, component_index_2, model_parameter, self._restrict_gibbs_sampling_iteration + 1);
+            
+            (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
+            
+            if proposed_m_k[component_index_1] == 0 or proposed_m_k[component_index_2] == 0:
+                print "merge cluster %d and %d during restricted gibbs sampling step..." % (component_index_1, component_index_2);
+                
+                if proposed_m_k[component_index_1] == 0:
+                    collapsed_cluster = component_index_1;
+                elif proposed_m_k[component_index_2] == 0:
+                    collapsed_cluster = component_index_2;
+
+                # since one cluster is empty now, switch it with the last one
+                proposed_n_kv[collapsed_cluster, :] = proposed_n_kv[proposed_K - 1, :];
+                proposed_m_k[collapsed_cluster] = proposed_m_k[proposed_K - 1];
+                proposed_n_dk[:, collapsed_cluster] = proposed_n_dk[:, proposed_K - 1];
+                
+                for document_index in xrange(self._D):
+                    proposed_k_dt[document_index][numpy.nonzero(proposed_k_dt[document_index] == (proposed_K - 1))] = collapsed_cluster;
+                
+                # remove the very last empty cluster, to remain compact cluster
+                proposed_n_kv = numpy.delete(proposed_n_kv, [proposed_K - 1], axis=0);
+                proposed_m_k = numpy.delete(proposed_m_k, [proposed_K - 1], axis=0);
+                proposed_n_dk = numpy.delete(proposed_n_dk, [proposed_K - 1], axis=1);
+                
+                proposed_count = numpy.delete(proposed_count, [proposed_K - 1], axis=0);
+                proposed_sum = numpy.delete(proposed_sum, [proposed_K - 1], axis=0);
+                proposed_mu = numpy.delete(proposed_mu, [proposed_K - 1], axis=0);
+                proposed_sigma_inv = numpy.delete(proposed_sigma_inv, [proposed_K - 1], axis=0);
+                proposed_log_sigma_det = numpy.delete(proposed_log_sigma_det, [proposed_K - 1], axis=0);
+                proposed_K -= 1;
+                
+                self._K = proposed_K
+                self._label = proposed_label;
+                
+                self._count = proposed_count;
+                self._sum = proposed_sum;
+                
+                self._mu = proposed_mu;
+                self._sigma_inv = proposed_sigma_inv;
+                self._log_sigma_det = proposed_log_sigma_det;
+                
+                assert numpy.all(self._count > 0)
+                    
+                return;
+            
+            log_proposal_probability = transition_log_probability;            
+        elif self._merge_proposal == 2:
+            pass
+        else:
+            pass
+            
         new_log_posterior = self.log_posterior(model_parameter);
-        
-        (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
-        
-        log_proposal_probability = -(proposed_m_k[component_index_1] - 2) * numpy.log(2);
         
         acceptance_log_probability = log_proposal_probability + new_log_posterior - old_log_posterior;
         acceptance_probability = numpy.exp(acceptance_log_probability);
+        
+        (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
         
         if numpy.random.random() < acceptance_probability:
             print "merge operation granted from %s to %s with acceptance probability %s" % (self._m_k, proposed_m_k, acceptance_probability);

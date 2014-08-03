@@ -502,6 +502,14 @@ class MonteCarlo(object):
         # sample the data points set
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
         
+        '''
+        print "check point 1"
+        print 473, proposed_k_dt[473], component_index
+        print proposed_t_dv[473]
+        print proposed_k_dt[473]
+        print proposed_n_dk[473, :]
+        '''
+        
         self.model_assertion(model_parameter);
 
         if proposed_m_k[component_index] <= 1:
@@ -519,7 +527,8 @@ class MonteCarlo(object):
         
         proposed_m_k = numpy.hstack((proposed_m_k, numpy.zeros(1)));
         assert(len(proposed_m_k) == proposed_K);
-        
+
+        model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
         self.model_assertion(model_parameter);
 
         for document_index in numpy.random.permutation(xrange(self._D)):
@@ -527,14 +536,7 @@ class MonteCarlo(object):
                 if proposed_k_dt[document_index][table_index] != component_index:
                     continue;
                 
-                #
-                #
-                #
-                #
-                #
-                
-                print 473, proposed_n_dk[473, :]
-                
+                '''
                 test_n_kv = numpy.zeros((proposed_K, self._vocabulary_size));
                 
                 for test_document_index in xrange(self._D):
@@ -561,34 +563,39 @@ class MonteCarlo(object):
                     assert numpy.all(test_n_dk == proposed_n_dk[test_document_index, :]), (test_n_dk, proposed_n_dk[test_document_index, :], test_document_index);
                 
                 assert numpy.all(test_n_kv == proposed_n_kv);
-                
-                #
-                #
-                #
-                #
-                #
+                '''
                 
                 if numpy.random.random() < 0.5:
-                    print proposed_m_k, component_index;
-                    print proposed_n_dk[document_index, :];
+                    '''
+                    print "check point 5"
+                    print document_index, table_index, proposed_k_dt[document_index][table_index], component_index
+                    print proposed_t_dv[document_index]
+                    print proposed_k_dt[document_index]
+                    print proposed_n_dk[document_index, :]
+                    '''
                     
                     proposed_k_dt[document_index][table_index] = proposed_K - 1;
                     
                     proposed_m_k[component_index] -= 1;
                     proposed_m_k[proposed_K - 1] += 1;
                     
-                    proposed_n_dk[document_index, component_index] -= 1;
-                    proposed_n_dk[document_index, proposed_K - 1] += 1;
+                    proposed_n_dk[document_index, component_index] -= proposed_n_dt[document_index][table_index];
+                    proposed_n_dk[document_index, proposed_K - 1] += proposed_n_dt[document_index][table_index];
                     
                     selected_word_index = numpy.nonzero(proposed_t_dv[document_index] == table_index)[0];
                     selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index][term] for term in list(selected_word_index)]);
                     for word_index in selected_word_freq_dist.keys():
                         proposed_n_kv[component_index, word_index] -= selected_word_freq_dist[word_index];
                         proposed_n_kv[proposed_K - 1, word_index] += selected_word_freq_dist[word_index];
-                        
-                    print proposed_m_k, component_index;
-                    print proposed_n_dk[document_index, :];
-
+                    
+                    '''    
+                    print "check point 6"
+                    print document_index, table_index, proposed_k_dt[document_index][table_index], component_index
+                    print proposed_t_dv[document_index]
+                    print proposed_k_dt[document_index]
+                    print proposed_n_dk[document_index, :]
+                    '''
+                    
                 number_of_unvisited_target_tables -= 1;
                 
                 if number_of_unvisited_target_tables == 0:
@@ -642,7 +649,7 @@ class MonteCarlo(object):
         (document_index_1, table_index_1) = document_table_indices.pop();
         proposed_k_dt[document_index_1][table_index_1] = component_index;
         proposed_m_k[component_index] = 1;
-        proposed_n_dk[document_index_1, component_index] = 1;
+        proposed_n_dk[document_index_1, component_index] = proposed_n_dt[document_index_1][table_index_1];
         
         selected_word_index = numpy.nonzero(proposed_t_dv[document_index_1] == table_index_1)[0];
         # find the frequency distribution of the words sitting on the current table
@@ -654,7 +661,7 @@ class MonteCarlo(object):
         (document_index_2, table_index_2) = document_table_indices.pop();
         proposed_k_dt[document_index_2][table_index_2] = proposed_K - 1;
         proposed_m_k[proposed_K - 1] = 1;
-        proposed_n_dk[document_index_2, proposed_K - 1] = 1;
+        proposed_n_dk[document_index_2, proposed_K - 1] = proposed_n_dt[document_index_2][table_index_2];
         
         selected_word_index = numpy.nonzero(proposed_t_dv[document_index_2] == table_index_2)[0];
         # find the frequency distribution of the words sitting on the current table
@@ -697,7 +704,7 @@ class MonteCarlo(object):
             # update the cluster parameters
             proposed_k_dt[document_index][table_index] = new_label;
             proposed_m_k[new_label] += 1;
-            proposed_n_dk[document_index, new_label] += 1;
+            proposed_n_dk[document_index, new_label] += proposed_n_dt[document_index][table_index];
             for word_id in selected_word_freq_dist.keys():
                 self._n_kv[new_label, word_id] = selected_word_freq_dist[word_id];
         

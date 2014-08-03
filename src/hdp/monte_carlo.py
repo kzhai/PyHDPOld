@@ -27,6 +27,8 @@ negative_infinity = -1e500;
 # We will be taking log(0) = -Inf, so turn off this warning
 numpy.seterr(divide='ignore')
 
+numpy.random.seed(100)
+
 class MonteCarlo(object):
     """
     @param truncation_level: the maximum number of clusters, used for speeding up the computation
@@ -161,7 +163,7 @@ class MonteCarlo(object):
         self.sample_cgs();
         
         if self._split_merge_heuristics > 0:
-            self.sample_topics();
+            self.split_merge()
     
         print "accumulated number of tables:", self._m_k;
         print "accumulated number of tokens:", numpy.sum(self._n_kv, axis=1)[:, numpy.newaxis].T;
@@ -303,11 +305,13 @@ class MonteCarlo(object):
             
         # compact all the parameters, including removing unused topics and unused tables
         self.compact_params();
+        
+        self.model_assertion();
 
     def sample_tables(self, document_index, table_index):
         # if this table is empty, skip the sampling directly
         if self._n_dt[document_index][table_index] <= 0:
-            continue;
+            return;
             
         old_topic_id = self._k_dt[document_index][table_index];
 
@@ -359,7 +363,7 @@ class MonteCarlo(object):
         new_topic_id = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
         
         if new_topic_id == old_topic_id:
-            continue;
+            return;
     
         # if the table is assigned to a new topic
         if new_topic_id == self._K:
@@ -392,13 +396,15 @@ class MonteCarlo(object):
 
     def split_merge(self):
         for iteration in xrange(self._split_merge_iteration):
+            topic_probability = 1.0 * self._m_k / numpy.sum(self._m_k);
+            
             if self._split_merge_heuristics == 1:
-                temp_cluster_probability = numpy.random.multinomial(1, self._m_k)[numpy.newaxis, :];
+                temp_cluster_probability = numpy.random.multinomial(1, topic_probability)[numpy.newaxis, :];
                 random_label_1 = numpy.nonzero(temp_cluster_probability == 1)[1][0];
-                temp_cluster_probability = numpy.random.multinomial(1, self._m_k)[numpy.newaxis, :];
+                temp_cluster_probability = numpy.random.multinomial(1, topic_probability)[numpy.newaxis, :];
                 random_label_2 = numpy.nonzero(temp_cluster_probability == 1)[1][0];
             elif self._split_merge_heuristics == 2:
-                temp_cluster_probability = numpy.random.multinomial(1, self._m_k)[numpy.newaxis, :];
+                temp_cluster_probability = numpy.random.multinomial(1, topic_probability)[numpy.newaxis, :];
                 random_label_1 = numpy.nonzero(temp_cluster_probability == 1)[1][0];
                 random_label_2 = numpy.random.randint(self._K);
             elif self._split_merge_heuristics == 3:
@@ -407,11 +413,13 @@ class MonteCarlo(object):
             else:
                 sys.stderr.write("error: unrecognized split-merge heuristics %d...\n" % (self._split_merge_heuristics));
                 return;
-        
+            
+            self.model_assertion();
             if random_label_1 == random_label_2:
                 self.split_metropolis_hastings(random_label_1);
             else:
                 self.merge_metropolis_hastings(random_label_1, random_label_2);
+            self.model_assertion();
 
     def split_metropolis_hastings(self, cluster_label):
         # record down the old cluster assignment
@@ -429,7 +437,7 @@ class MonteCarlo(object):
         proposed_k_dt = copy.deepcopy(self._k_dt);
         
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-
+        
         if self._split_proposal == 0:
             # perform random split for split proposal
             model_parameter = self.random_split(cluster_label, model_parameter);
@@ -454,9 +462,18 @@ class MonteCarlo(object):
             
             log_proposal_probability = transition_log_probability;
         elif self._split_proposal == 2:
-            pass;
+            # perform sequential allocation gibbs sampling for split proposal
+            model_parameter = self.sequential_allocation(cluster_label, model_parameter);
+            
+            if model_parameter == None:
+                return;
+        
+            (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
+            assert numpy.all(proposed_m_k > 0)
+        
+            log_proposal_probability = (proposed_m_k[cluster_label] + proposed_m_k[proposed_K - 1] - 2) * numpy.log(2);
         else:
-            pass        
+            sys.stderr.write("error: unrecognized split proposal strategy %d...\n" % (self._split_proposal));
         
         new_log_posterior = self.log_posterior(model_parameter);
         
@@ -479,56 +496,13 @@ class MonteCarlo(object):
             self._t_dv = proposed_t_dv;
             self._k_dt = proposed_k_dt;
         
-        #
-        #
-        #
-        #
-        #
+        self.model_assertion();
         
-        '''
-        if self._split_proposal == 1:
-            # data_point_indices = numpy.nonzero(proposed_label==cluster_label)[0];
-            
-            # perform restricted gibbs sampling for split proposal
-            model_parameter = self.random_split(cluster_label, model_parameter);
-            # split a singleton cluster
-            if model_parameter == None:
-                return;
-            
-            (proposed_label, proposed_K, proposed_count, proposed_mu, proposed_sum, proposed_log_sigma_det, proposed_sigma_inv) = model_parameter;
-            model_parameter = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter, self._restrict_gibbs_sampling_iteration);
-            (proposed_label, proposed_K, proposed_count, proposed_mu, proposed_sum, proposed_log_sigma_det, proposed_sigma_inv) = model_parameter;
-            
-            if proposed_count[cluster_label] == 0 or proposed_count[proposed_K - 1] == 0:
-                return;
-            
-            self._K = proposed_K
-            self._label = proposed_label;
-            
-            self._count = proposed_count;
-            self._sum = proposed_sum;
-            
-            self._mu = proposed_mu;
-            self._sigma_inv = proposed_sigma_inv;
-            self._log_sigma_det = proposed_log_sigma_det;
-            
-            assert numpy.all(self._count > 0)
-            old_log_posterior = self.log_posterior();
-            
-            model_parameter = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter);
-            
-            if proposed_count[cluster_label] == 0 or proposed_count[proposed_K - 1] == 0:
-                return;
-        elif self._split_proposal == 2:
-            # perform sequential allocation gibbs sampling for split proposal
-            model_parameter = self.sequential_allocation(cluster_label, model_parameter);
-        else:
-            sys.stderr.write("error: unrecognized split proposal strategy %d...\n" % (self._split_proposal));
-        '''
-
     def random_split(self, component_index, model_parameter):
         # sample the data points set
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
+        
+        self.model_assertion(model_parameter);
 
         if proposed_m_k[component_index] <= 1:
             return None;
@@ -539,31 +513,81 @@ class MonteCarlo(object):
         
         proposed_n_dk = numpy.hstack((proposed_n_dk, numpy.zeros((self._D, 1))));
         assert(proposed_n_dk.shape == (self._D, proposed_K));
-                    
+        
         proposed_n_kv = numpy.vstack((proposed_n_kv, numpy.zeros((1, self._vocabulary_size))));
         assert(proposed_n_kv.shape == (proposed_K, self._vocabulary_size));
-
+        
         proposed_m_k = numpy.hstack((proposed_m_k, numpy.zeros(1)));
         assert(len(proposed_m_k) == proposed_K);
+        
+        self.model_assertion(model_parameter);
 
         for document_index in numpy.random.permutation(xrange(self._D)):
             for table_index in numpy.random.permutation(xrange(len(proposed_k_dt[document_index]))):
                 if proposed_k_dt[document_index][table_index] != component_index:
                     continue;
                 
+                #
+                #
+                #
+                #
+                #
+                
+                print 473, proposed_n_dk[473, :]
+                
+                test_n_kv = numpy.zeros((proposed_K, self._vocabulary_size));
+                
+                for test_document_index in xrange(self._D):
+                    test_n_dt = [0] * len(proposed_k_dt[test_document_index]);
+                    test_n_dk = numpy.zeros(proposed_K);
+                    
+                    # sample word assignment, see which table it should belong to
+                    for test_word_index in numpy.random.permutation(xrange(len(self._corpus[test_document_index]))):
+                        # get the word_id of at the word_index of the document_index
+                        word_id = self._corpus[test_document_index][test_word_index];
+                        
+                        # retrieve the old_table_id of the current word of current document
+                        table_id = proposed_t_dv[test_document_index][test_word_index];
+                        # retrieve the old_topic_id of the table that current word of current document sit on
+                        topic_id = proposed_k_dt[test_document_index][table_id];
+        
+                        test_n_dt[table_id] += 1;
+                        test_n_dk[topic_id] += 1;                
+                        test_n_kv[topic_id, word_id] += 1;
+                        
+                    for test_table_index in xrange(len(test_n_dt)):
+                        assert test_n_dt[test_table_index] == proposed_n_dt[test_document_index][test_table_index], (test_n_dt, proposed_n_dt[test_document_index]);
+                    
+                    assert numpy.all(test_n_dk == proposed_n_dk[test_document_index, :]), (test_n_dk, proposed_n_dk[test_document_index, :], test_document_index);
+                
+                assert numpy.all(test_n_kv == proposed_n_kv);
+                
+                #
+                #
+                #
+                #
+                #
+                
                 if numpy.random.random() < 0.5:
+                    print proposed_m_k, component_index;
+                    print proposed_n_dk[document_index, :];
+                    
                     proposed_k_dt[document_index][table_index] = proposed_K - 1;
                     
                     proposed_m_k[component_index] -= 1;
                     proposed_m_k[proposed_K - 1] += 1;
                     
-                    proposed_n_dk[document_index, component_index] -= proposed_n_dt[table_index];
-                    proposed_n_dk[document_index, proposed_K - 1] += proposed_n_dt[table_index];
+                    proposed_n_dk[document_index, component_index] -= 1;
+                    proposed_n_dk[document_index, proposed_K - 1] += 1;
                     
                     selected_word_index = numpy.nonzero(proposed_t_dv[document_index] == table_index)[0];
-                    for word_index in selected_word_index:
-                        proposed_n_kv[component_index, word_index] -= 1;
-                        proposed_n_kv[proposed_K - 1, word_index] += 1;
+                    selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index][term] for term in list(selected_word_index)]);
+                    for word_index in selected_word_freq_dist.keys():
+                        proposed_n_kv[component_index, word_index] -= selected_word_freq_dist[word_index];
+                        proposed_n_kv[proposed_K - 1, word_index] += selected_word_freq_dist[word_index];
+                        
+                    print proposed_m_k, component_index;
+                    print proposed_n_dk[document_index, :];
 
                 number_of_unvisited_target_tables -= 1;
                 
@@ -577,7 +601,110 @@ class MonteCarlo(object):
             return None;
         else:
             model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
+            self.model_assertion(model_parameter), proposed_m_k;
             return model_parameter
+
+    def sequential_allocation(self, component_index, model_parameter):
+        # sample the data points set
+        (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
+        
+        document_table_indices = [];
+        for document_index in xrange(self._D):
+            for table_index in xrange(len(proposed_k_dt[document_index])):
+                if proposed_k_dt[document_index][table_index] == component_index:
+                    document_table_indices.append((document_index, table_index));
+                    
+                if len(document_table_indices) == proposed_m_k[component_index]:
+                    break;
+            if len(document_table_indices) == proposed_m_k[component_index]:
+                    break;
+                
+        assert len(document_table_indices) == proposed_m_k[component_index];
+        
+        if len(document_table_indices) < 2:
+            return None;
+        
+        # randomly choose two points and initialize the cluster
+        random.shuffle(document_table_indices);
+        
+        # clear current cluster
+        proposed_n_kv[component_index, :] = 0;
+        proposed_m_k[component_index] = 0;
+        proposed_n_dk[:, component_index] = 0;
+        
+        # create a new cluster
+        proposed_n_kv = numpy.vstack((proposed_n_kv, numpy.zeros((1, self._vocabulary_size))));
+        proposed_m_k = numpy.hstack((proposed_m_k, numpy.zeros(1)));
+        proposed_n_dk = numpy.hstack((proposed_n_dk, numpy.zeros(self._D, 1)));
+        proposed_K += 1;
+        
+        # initialize the existing cluster
+        (document_index_1, table_index_1) = document_table_indices.pop();
+        proposed_k_dt[document_index_1][table_index_1] = component_index;
+        proposed_m_k[component_index] = 1;
+        proposed_n_dk[document_index_1, component_index] = 1;
+        
+        selected_word_index = numpy.nonzero(proposed_t_dv[document_index_1] == table_index_1)[0];
+        # find the frequency distribution of the words sitting on the current table
+        selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index_1][term] for term in list(selected_word_index)]);
+        for word_id in selected_word_freq_dist.keys():
+            self._n_kv[component_index, word_id] = selected_word_freq_dist[word_id];
+        
+        # initialize the new cluster
+        (document_index_2, table_index_2) = document_table_indices.pop();
+        proposed_k_dt[document_index_2][table_index_2] = proposed_K - 1;
+        proposed_m_k[proposed_K - 1] = 1;
+        proposed_n_dk[document_index_2, proposed_K - 1] = 1;
+        
+        selected_word_index = numpy.nonzero(proposed_t_dv[document_index_2] == table_index_2)[0];
+        # find the frequency distribution of the words sitting on the current table
+        selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index_2][term] for term in list(selected_word_index)]);
+        for word_id in selected_word_freq_dist.keys():
+            self._n_kv[proposed_K - 1, word_id] = selected_word_freq_dist[word_id];
+
+        # sequentially allocation all the rest points to different clusters
+        for (document_index, table_index) in document_table_indices:
+            selected_word_index = numpy.nonzero(proposed_t_dv[document_index] == table_index)[0];
+            # find the frequency distribution of the words sitting on the current table
+            selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index][term] for term in list(selected_word_index)]);
+            
+            n_k = numpy.sum(proposed_n_kv, axis=1);
+            
+            # compute the probability of being in current cluster
+            current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[component_index]);
+            current_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[component_index] + proposed_n_dt[document_index][table_index]);
+            for word_id in selected_word_freq_dist.keys():
+                current_topic_probability += scipy.special.gammaln(proposed_n_kv[component_index, word_id] + self._alpha_eta + selected_word_freq_dist[word_id]);
+                current_topic_probability -= scipy.special.gammaln(proposed_n_kv[component_index, word_id] + self._alpha_eta);
+            current_topic_probability += numpy.log(proposed_m_k[component_index]);
+            
+            # compute the probability of being in other cluster
+            other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[proposed_K - 1]);
+            other_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[proposed_K - 1] + proposed_n_dt[document_index][table_index]);
+            for word_id in selected_word_freq_dist.keys():
+                other_topic_probability += scipy.special.gammaln(proposed_n_kv[proposed_K - 1, word_id] + self._alpha_eta + selected_word_freq_dist[word_id]);
+                other_topic_probability -= scipy.special.gammaln(proposed_n_kv[proposed_K - 1, word_id] + self._alpha_eta);
+            other_topic_probability += numpy.log(proposed_m_k[proposed_K - 1]);
+            
+            # sample a new cluster label for current table
+            ratio_other_over_current = numpy.exp(other_topic_probability - current_topic_probability);
+            cluster_probability_current = 1. / (1. + ratio_other_over_current);
+            if numpy.random.random() <= cluster_probability_current:
+                new_label = component_index;
+            else:
+                new_label = proposed_K - 1;
+            
+            # update the cluster parameters
+            proposed_k_dt[document_index][table_index] = new_label;
+            proposed_m_k[new_label] += 1;
+            proposed_n_dk[document_index, new_label] += 1;
+            for word_id in selected_word_freq_dist.keys():
+                self._n_kv[new_label, word_id] = selected_word_freq_dist[word_id];
+        
+        assert proposed_m_k[component_index] > 0 and proposed_m_k[proposed_K - 1] > 0;
+        
+        model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
+        return model_parameter;
 
     def restrict_gibbs_sampling(self, cluster_index_1, cluster_index_2, model_parameter, restricted_gibbs_sampling_iteration=1):
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
@@ -709,7 +836,7 @@ class MonteCarlo(object):
             model_parameter, transition_log_probability = self.restrict_gibbs_sampling(component_index_1, component_index_2, model_parameter, self._restrict_gibbs_sampling_iteration + 1);
             
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
-            assert numpy.all(proposed_m_k>=0);
+            assert numpy.all(proposed_m_k >= 0);
             
             if proposed_m_k[component_index_1] == 0 or proposed_m_k[component_index_2] == 0:
                 print "merge cluster %d and %d during restricted gibbs sampling step..." % (component_index_1, component_index_2);
@@ -733,6 +860,7 @@ class MonteCarlo(object):
                 proposed_n_dk = numpy.delete(proposed_n_dk, [proposed_K - 1], axis=1);
                 proposed_K -= 1;
                 
+                '''
                 self._K = proposed_K;
             
                 self._n_kv = proposed_n_kv;
@@ -744,15 +872,33 @@ class MonteCarlo(object):
                 self._t_dv = proposed_t_dv;
                 self._k_dt = proposed_k_dt;
                 
-                assert numpy.all(self._count > 0)
+                assert numpy.all(self._m_k > 0)
                 
                 return;
+                '''
             
             log_proposal_probability = transition_log_probability;            
         elif self._merge_proposal == 2:
-            pass
+            # perform gibbs sampling for merge proposal
+            cluster_log_probability = numpy.log(proposed_m_k);
+            cluster_log_probability = numpy.sum(cluster_log_probability) - cluster_log_probability;
+            cluster_log_probability -= scipy.misc.logsumexp(cluster_log_probability);
+    
+            # choose a cluster that is inverse proportional to its size
+            cluster_probability = numpy.exp(cluster_log_probability);
+            temp_cluster_probability = numpy.random.multinomial(1, cluster_probability)[numpy.newaxis, :];
+            cluster_label = numpy.nonzero(temp_cluster_probability == 1)[1][0];
+            
+            model_parameter = self.merge_gibbs_sampling(cluster_label, model_parameter);
+            if model_parameter == None:
+                return;
+            
+            (proposed_label, proposed_K, proposed_count, proposed_mu, proposed_sum, proposed_log_sigma_det, proposed_sigma_inv) = model_parameter;
+            assert numpy.all(proposed_count > 0)
+            
+            log_proposal_probability = -(proposed_count[cluster_label_1] - 2) * numpy.log(2);
         else:
-            pass
+            sys.stderr.write("error: unrecognized merge proposal strategy %d...\n" % (self._merge_proposal));
             
         new_log_posterior = self.log_posterior(model_parameter);
         
@@ -774,105 +920,9 @@ class MonteCarlo(object):
             
             self._t_dv = proposed_t_dv;
             self._k_dt = proposed_k_dt;
-            
-            
-        #
-        #
-        #
-        #
-        #
-        '''
-        if self._merge_proposal == 1:
-            # perform restricted gibbs sampling for merge proposal
-            # (proposed_label, proposed_K, proposed_count, proposed_mu, proposed_sum, proposed_log_sigma_det, proposed_sigma_inv) = model_parameter;
-            model_parameter = self.restrict_gibbs_sampling(component_index_1, component_index_2, model_parameter, self._restrict_gibbs_sampling_iteration);
-            (proposed_label, proposed_K, proposed_count, proposed_mu, proposed_sum, proposed_log_sigma_det, proposed_sigma_inv) = model_parameter;
-
-            self._K = proposed_K
-            self._label = proposed_label;
-            
-            self._count = proposed_count;
-            self._sum = proposed_sum;
-            
-            self._mu = proposed_mu;
-            self._sigma_inv = proposed_sigma_inv;
-            self._log_sigma_det = proposed_log_sigma_det;
-            
-            collapsed_cluster = -1;
-            if proposed_count[component_index_1] == 0:
-                collapsed_cluster = component_index_1;
-            elif proposed_count[component_index_2] == 0:
-                collapsed_cluster = component_index_2;
-            
-            if collapsed_cluster != -1:
-                print "merge cluster %d and %d during restricted gibbs sampling step..." % (component_index_1, component_index_2);
-                
-                # remove the empty cluster, to remain compact cluster
-                self._count = numpy.delete(self._count, [collapsed_cluster], axis=0);
-                self._sum = numpy.delete(self._sum, [collapsed_cluster], axis=0);
-                self._mu = numpy.delete(self._mu, [collapsed_cluster], axis=0);
-                self._sigma_inv = numpy.delete(self._sigma_inv, [collapsed_cluster], axis=0);
-                self._log_sigma_det = numpy.delete(self._log_sigma_det, [collapsed_cluster], axis=0);
-                self._K -= 1;
-            
-                assert numpy.all(self._count > 0)
-                    
-                return;
-            else:
-                old_log_posterior = self.log_posterior();
-        elif self._merge_proposal == 2:
-            # perform gibbs sampling for merge proposal
-            cluster_log_probability = numpy.log(proposed_count);
-            cluster_log_probability = numpy.sum(cluster_log_probability) - cluster_log_probability;
-            cluster_log_probability -= scipy.misc.logsumexp(cluster_log_probability);
-    
-            cluster_probability = numpy.exp(cluster_log_probability);
-            temp_cluster_probability = numpy.random.multinomial(1, cluster_probability)[numpy.newaxis, :];
-            cluster_label = numpy.nonzero(temp_cluster_probability == 1)[1][0];
-            
-            model_parameter = self.merge_gibbs_sampling(cluster_label, model_parameter);
-            
-            if model_parameter == None:
-                return;
-        else:
-            sys.stderr.write("error: unrecognized merge proposal strategy %d...\n" % (self._merge_proposal));
         
-        (proposed_label, proposed_K, proposed_count, proposed_mu, proposed_sum, proposed_log_sigma_det, proposed_sigma_inv) = model_parameter;
-        assert numpy.all(proposed_count > 0)
+        self.model_assertion();
         
-        
-        
-        assert proposed_K == len(proposed_log_sigma_det);
-        assert numpy.max(proposed_label) < len(proposed_log_sigma_det);
-        assert numpy.sum(proposed_count) == self._N;
-        assert proposed_mu.shape == (proposed_K, self._D);
-
-        # model_parameter = (proposed_label, proposed_K, proposed_count, proposed_mu, proposed_sum, proposed_log_sigma_det, proposed_sigma_inv);
-        new_log_posterior = self.log_posterior(model_parameter);
-        
-        acceptance_log_probability = log_proposal_probability + new_log_posterior - old_log_posterior;
-        acceptance_probability = numpy.exp(acceptance_log_probability);
-        
-        if numpy.random.random() < acceptance_probability:
-            print "merge operation granted from %s to %s with acceptance probability %s" % (self._count, proposed_count, acceptance_probability);
-            
-            self._K = proposed_K
-            self._label = proposed_label;
-            
-            self._count = proposed_count;
-            self._sum = proposed_sum;
-            
-            self._mu = proposed_mu;
-            self._sigma_inv = proposed_sigma_inv;
-            self._log_sigma_det = proposed_log_sigma_det;
-            
-        assert self._count.shape == (self._K,), (self._count.shape, self._K)
-        assert self._sum.shape == (self._K, self._D);
-        assert self._mu.shape == (self._K, self._D);
-        assert self._sigma_inv.shape == (self._K, self._D, self._D);
-        assert self._log_sigma_det.shape == (self._K,);
-        '''
-
     def random_merge(self, component_index_1, component_index_2, model_parameter):
         assert component_index_2 > component_index_1;
         
@@ -905,12 +955,12 @@ class MonteCarlo(object):
         # merge component_index_2 with component_index_1
         proposed_n_kv[component_index_1, :] += proposed_n_kv[component_index_2, :];
         proposed_m_k[component_index_1] += proposed_m_k[component_index_2];
-        proposed_n_dk[:, component_index_1] += proposed_n_dt[:, component_index_2];
+        proposed_n_dk[:, component_index_1] += proposed_n_dk[:, component_index_2];
         
         # shift the very last component to component_index_2
         proposed_n_kv[component_index_2, :] = proposed_n_kv[proposed_K - 1, :];
         proposed_m_k[component_index_2] = proposed_m_k[proposed_K - 1];
-        proposed_n_dk[:, component_index_2] += proposed_n_dt[:, proposed_K - 1];
+        proposed_n_dk[:, component_index_2] += proposed_n_dk[:, proposed_K - 1];
         
         # remove the very last component
         proposed_n_kv = numpy.delete(proposed_n_kv, [proposed_K - 1], axis=0);
@@ -921,8 +971,6 @@ class MonteCarlo(object):
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
         
         return model_parameter;
-
-
     
     '''
     def sample_topics(self):
@@ -1295,17 +1343,47 @@ class MonteCarlo(object):
         assert(numpy.all(self._m_k >= 0));
         assert(numpy.all(self._k_dt[document_index] >= 0));        
         
-"""
-@param n: an integer data type
-@param a: 
-@attention: n must be an integer
-this function is to compute the log(n!), since n!=Gamma(n+1), which means log(n!)=lngamma(n+1)
-"""
-def log_factorial(n, a):
-    if n == 0:
-        return 0.;
-    return scipy.special.gammaln(n + a) - scipy.special.gammaln(a);
+    def model_assertion(self, model_parameter=None):
+        if model_parameter == None:
+            K = self._K;
+            n_kv = self._n_kv;
+            m_k = self._m_k;
+            n_dk = self._n_dk;
+            n_dt = self._n_dt;
+            t_dv = self._t_dv;
+            k_dt = self._k_dt;
+        else:
+            (K, n_kv, m_k, n_dk, n_dt, t_dv, k_dt) = model_parameter;
 
+        print "check model assertion..."
+        
+        test_n_kv = numpy.zeros((K, self._vocabulary_size));
+                
+        for document_index in xrange(self._D):
+            test_n_dt = [0] * len(k_dt[document_index]);
+            test_n_dk = numpy.zeros(K);
+            
+            # sample word assignment, see which table it should belong to
+            for word_index in numpy.random.permutation(xrange(len(self._corpus[document_index]))):
+                # get the word_id of at the word_index of the document_index
+                word_id = self._corpus[document_index][word_index];
+                
+                # retrieve the old_table_id of the current word of current document
+                table_id = t_dv[document_index][word_index];
+                # retrieve the old_topic_id of the table that current word of current document sit on
+                topic_id = k_dt[document_index][table_id];
+
+                test_n_dt[table_id] += 1;
+                test_n_dk[topic_id] += 1;                
+                test_n_kv[topic_id, word_id] += 1;
+
+            for table_index in xrange(len(test_n_dt)):
+                assert test_n_dt[table_index] == n_dt[document_index][table_index];
+            
+            assert numpy.all(test_n_dk == n_dk[document_index, :]), (test_n_dk, n_dk[document_index, :]);
+        
+        assert numpy.all(test_n_kv == n_kv);
+                        
 """
 """
 def print_topics(n_kv, term_mapping, top_words=10):

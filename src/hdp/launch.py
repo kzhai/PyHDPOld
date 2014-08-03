@@ -55,30 +55,30 @@ def main():
     if options.snapshot_interval>0:
         snapshot_interval=options.snapshot_interval;
         
+    #resample_topics = options.resample_topics;
+    #hash_oov_words = options.hash_oov_words;
+            
     # parameter set 4
     split_merge_heuristics = options.split_merge_heuristics;
     split_proposal = options.split_proposal;
     merge_proposal = options.merge_proposal;
-    
-    resample_topics = options.resample_topics;
-    hash_oov_words = options.hash_oov_words;
-    
+
     # create output directory
     now = datetime.datetime.now();
-    suffix = now.strftime("%y%b%d-%H%M%S")+"";
+    suffix = now.strftime("%y%m%d-%H%M%S")+"";
     suffix += "-%s" % ("hdp");
     suffix += "-I%d" % (training_iterations);
     suffix += "-S%d" % (snapshot_interval);
     suffix += "-aa%g" % (alpha_alpha);
     suffix += "-ag%g" % (alpha_gamma);
     suffix += "-ae%g" % (alpha_eta);
-    
-    suffix += "-smh%d" % (split_merge_heuristics);
-    suffix += "-sp%d" % (split_proposal);
-    suffix += "-mp%d" % (merge_proposal);
-    
-    suffix += "-%s" % (resample_topics);
-    suffix += "-%s" % (hash_oov_words);
+    #suffix += "-%s" % (resample_topics);
+    #suffix += "-%s" % (hash_oov_words);
+    if split_merge_heuristics>=0:
+        suffix += "-smh%d" % (split_merge_heuristics);
+    if split_merge_heuristics>=1:
+        suffix += "-sp%d" % (split_proposal);
+        suffix += "-mp%d" % (merge_proposal);
     suffix += "/";
 
     output_directory = os.path.join(output_directory, suffix);
@@ -97,12 +97,14 @@ def main():
     # parameter set 3
     options_output_file.write("training_iteration=%d\n" % training_iterations);
     options_output_file.write("snapshot_interval=%d\n" % snapshot_interval);
-    options_output_file.write("resample_topics=%s\n" % resample_topics);
-    options_output_file.write("hash_oov_words=%s\n" % hash_oov_words);
+    #options_output_file.write("resample_topics=%s\n" % resample_topics);
+    #options_output_file.write("hash_oov_words=%s\n" % hash_oov_words);
     # parameter set 4
-    options_output_file.write("split_merge_heuristics=%d\n" % split_merge_heuristics);
-    options_output_file.write("split_proposal=%d\n" % split_proposal);
-    options_output_file.write("merge_proposal=%d\n" % merge_proposal);
+    if split_merge_heuristics>=0:
+        options_output_file.write("split_merge_heuristics=%d\n" % split_merge_heuristics);
+    if split_merge_heuristics>=1:
+        options_output_file.write("split_proposal=%d\n" % split_proposal);
+        options_output_file.write("merge_proposal=%d\n" % merge_proposal);
     options_output_file.close()
     
     print "========== ========== ========== ========== =========="
@@ -118,12 +120,14 @@ def main():
     # parameter set 3
     print "training_iteration=%d" % (training_iterations);
     print "snapshot_interval=%d" % (snapshot_interval);
-    print "resample_topics=%s" % (resample_topics)
-    print "hash_oov_words=%s" % (hash_oov_words)
+    #print "resample_topics=%s" % (resample_topics)
+    #print "hash_oov_words=%s" % (hash_oov_words)
     # parameter set 4
-    print "split_merge_heuristics=%d" % (split_merge_heuristics)
-    print "split_proposal=%d" % split_proposal;
-    print "merge_proposal=%d" % merge_proposal;
+    if split_merge_heuristics>=0:
+        print "split_merge_heuristics=%d" % (split_merge_heuristics)
+    if split_merge_heuristics>=1:
+        print "split_proposal=%d" % split_proposal;
+        print "merge_proposal=%d" % merge_proposal;
     print "========== ========== ========== ========== =========="
     
     import monte_carlo;

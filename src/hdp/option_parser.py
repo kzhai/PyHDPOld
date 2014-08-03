@@ -17,13 +17,13 @@ def parse_args():
                         # parameter set 3
                         training_iterations=1000,
                         snapshot_interval=100,
-                        resample_topics=False,
-                        hash_oov_words=False,
+                        #resample_topics=False,
+                        #hash_oov_words=False,
                         
                         # parameter set 4
                         split_proposal=0,
                         merge_proposal=0,
-                        split_merge_heuristics=0,
+                        split_merge_heuristics=-1,
                         )
     # parameter set 1
     parser.add_option("--input_directory", type="string", dest="input_directory",
@@ -46,10 +46,10 @@ def parse_args():
                       help="number of training iterations [1000]");
     parser.add_option("--snapshot_interval", type="int", dest="snapshot_interval",
                       help="snapshot interval [100]");
-    parser.add_option("--resample_topics", action="store_true", dest="resample_topics",
-                      help="resample topics [False]")
-    parser.add_option("--hash_oov_words", action="store_true", dest="hash_oov_words",
-                      help="hash out-of-vocabulary words to run this model in pseudo infinite vocabulary mode [False]")
+    #parser.add_option("--resample_topics", action="store_true", dest="resample_topics",
+                      #help="resample topics [False]")
+    #parser.add_option("--hash_oov_words", action="store_true", dest="hash_oov_words",
+                      #help="hash out-of-vocabulary words to run this model in pseudo infinite vocabulary mode [False]")
     
     # parameter set 4
     parser.add_option("--merge_proposal", type="int", dest="merge_proposal",
@@ -66,11 +66,11 @@ def parse_args():
                             "]")    
     parser.add_option("--split_merge_heuristics", type="int", dest="split_merge_heuristics",
                       help="split-merge heuristics [ " + 
-                            "0 (default): no split-merge operation, " + 
+                            "-1 (default): no split-merge operation, " +
+                            "0: component resampling, " + 
                             "1: random choose candidate clusters by points, " + 
                             "2: random choose candidate clusters by point-cluster, " + 
-                            "3: random choose candidate clusters by clusters, " +
-                            "4: component resampling " +
+                            "3: random choose candidate clusters by clusters " +
                             "]")
     
     (options, args) = parser.parse_args();

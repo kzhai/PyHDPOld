@@ -9,9 +9,9 @@ def main():
     options = option_parser.parse_args();
     
     # parameter set 1
-    #assert(options.corpus_name!=None);
-    assert(options.input_directory!=None);
-    assert(options.output_directory!=None);
+    # assert(options.corpus_name!=None);
+    assert(options.input_directory != None);
+    assert(options.output_directory != None);
     
     input_directory = options.input_directory;
     input_directory = input_directory.rstrip("/");
@@ -41,22 +41,22 @@ def main():
     print "successfully load all the words from %s..." % (dictionary_file);
     
     # parameter set 2
-    alpha_eta = 1.0/len(vocab);
-    if options.alpha_eta>0:
-        alpha_eta=options.alpha_eta;
-    assert(options.alpha_alpha>0);
+    alpha_eta = 1.0 / len(vocab);
+    if options.alpha_eta > 0:
+        alpha_eta = options.alpha_eta;
+    assert(options.alpha_alpha > 0);
     alpha_alpha = options.alpha_alpha;
-    assert(options.alpha_gamma>0);
+    assert(options.alpha_gamma > 0);
     alpha_gamma = options.alpha_gamma;
     
     # parameter set 3
-    if options.training_iterations>0:
-        training_iterations=options.training_iterations;
-    if options.snapshot_interval>0:
-        snapshot_interval=options.snapshot_interval;
+    if options.training_iterations > 0:
+        training_iterations = options.training_iterations;
+    if options.snapshot_interval > 0:
+        snapshot_interval = options.snapshot_interval;
         
-    #resample_topics = options.resample_topics;
-    #hash_oov_words = options.hash_oov_words;
+    # resample_topics = options.resample_topics;
+    # hash_oov_words = options.hash_oov_words;
             
     # parameter set 4
     split_merge_heuristics = options.split_merge_heuristics;
@@ -65,18 +65,18 @@ def main():
 
     # create output directory
     now = datetime.datetime.now();
-    suffix = now.strftime("%y%m%d-%H%M%S")+"";
+    suffix = now.strftime("%y%m%d-%H%M%S") + "";
     suffix += "-%s" % ("hdp");
     suffix += "-I%d" % (training_iterations);
     suffix += "-S%d" % (snapshot_interval);
     suffix += "-aa%g" % (alpha_alpha);
     suffix += "-ag%g" % (alpha_gamma);
     suffix += "-ae%g" % (alpha_eta);
-    #suffix += "-%s" % (resample_topics);
-    #suffix += "-%s" % (hash_oov_words);
-    if split_merge_heuristics>=0:
+    # suffix += "-%s" % (resample_topics);
+    # suffix += "-%s" % (hash_oov_words);
+    if split_merge_heuristics >= 0:
         suffix += "-smh%d" % (split_merge_heuristics);
-    if split_merge_heuristics>=1:
+    if split_merge_heuristics >= 1:
         suffix += "-sp%d" % (split_proposal);
         suffix += "-mp%d" % (merge_proposal);
     suffix += "/";
@@ -97,12 +97,12 @@ def main():
     # parameter set 3
     options_output_file.write("training_iteration=%d\n" % training_iterations);
     options_output_file.write("snapshot_interval=%d\n" % snapshot_interval);
-    #options_output_file.write("resample_topics=%s\n" % resample_topics);
-    #options_output_file.write("hash_oov_words=%s\n" % hash_oov_words);
+    # options_output_file.write("resample_topics=%s\n" % resample_topics);
+    # options_output_file.write("hash_oov_words=%s\n" % hash_oov_words);
     # parameter set 4
-    if split_merge_heuristics>=0:
+    if split_merge_heuristics >= 0:
         options_output_file.write("split_merge_heuristics=%d\n" % split_merge_heuristics);
-    if split_merge_heuristics>=1:
+    if split_merge_heuristics >= 1:
         options_output_file.write("split_proposal=%d\n" % split_proposal);
         options_output_file.write("merge_proposal=%d\n" % merge_proposal);
     options_output_file.close()
@@ -120,12 +120,12 @@ def main():
     # parameter set 3
     print "training_iteration=%d" % (training_iterations);
     print "snapshot_interval=%d" % (snapshot_interval);
-    #print "resample_topics=%s" % (resample_topics)
-    #print "hash_oov_words=%s" % (hash_oov_words)
+    # print "resample_topics=%s" % (resample_topics)
+    # print "hash_oov_words=%s" % (hash_oov_words)
     # parameter set 4
-    if split_merge_heuristics>=0:
+    if split_merge_heuristics >= 0:
         print "split_merge_heuristics=%d" % (split_merge_heuristics)
-    if split_merge_heuristics>=1:
+    if split_merge_heuristics >= 1:
         print "split_proposal=%d" % split_proposal;
         print "merge_proposal=%d" % merge_proposal;
     print "========== ========== ========== ========== =========="
@@ -134,26 +134,27 @@ def main():
     hdp = monte_carlo.MonteCarlo(split_merge_heuristics, split_proposal, merge_proposal);
     hdp._initialize(train_docs, vocab, alpha_alpha, alpha_gamma, alpha_eta)
     
+    hdp.export_beta(os.path.join(output_directory, 'exp_beta-' + str(hdp._iteration_counter)), 50);
+    numpy.savetxt(os.path.join(output_directory, 'n_kv-' + str(hdp._iteration_counter)), hdp._n_kv, fmt="%d");
+    
     for iteration in xrange(training_iterations):
         clock = time.time();
         log_likelihood = hdp.learning();
-        clock = time.time()-clock;
-        print 'training iteration %d finished in %f seconds: number-of-topics = %d, log-likelihood = %f' % (hdp._counter, clock, hdp._K, log_likelihood);
+        clock = time.time() - clock;
+        print 'training iteration %d finished in %f seconds: number-of-topics = %d, log-likelihood = %f' % (hdp._iteration_counter, clock, hdp._K, log_likelihood);
 
         # Save lambda, the parameters to the variational distributions over topics, and batch_gamma, the parameters to the variational distributions over topic weights for the articles analyzed in the last iteration.
-        #if ((hdp._counter+1) % snapshot_interval == 0):
-            #hdp.export_beta(output_directory + 'exp_beta-' + str(hdp._counter+1));
-        if (hdp._counter % snapshot_interval == 0):
-            hdp.export_beta(os.path.join(output_directory, 'exp_beta-' + str(hdp._counter)), 50);
-            numpy.savetxt(os.path.join(output_directory, 'n_kv-' + str(hdp._counter)), hdp._n_kv, fmt="%d");
-            #numpy.savetxt(os.path.join(output_directory, 'beta-' + str(hdp._counter)), hdp._E_log_beta);
-            #numpy.savetxt(os.path.join(output_directory, 'lambda-' + str(hdp._counter)), hdp._lambda);
+        if (hdp._iteration_counter % snapshot_interval == 0):
+            hdp.export_beta(os.path.join(output_directory, 'exp_beta-' + str(hdp._iteration_counter)), 50);
+            numpy.savetxt(os.path.join(output_directory, 'n_kv-' + str(hdp._iteration_counter)), hdp._n_kv, fmt="%d");
+            # numpy.savetxt(os.path.join(output_directory, 'beta-' + str(hdp._iteration_counter)), hdp._E_log_beta);
+            # numpy.savetxt(os.path.join(output_directory, 'lambda-' + str(hdp._iteration_counter)), hdp._lambda);
     
-    #gamma_path = os.path.join(output_directory, 'gamma.txt');
-    #numpy.savetxt(gamma_path, hdp._document_topic_distribution);
+    # gamma_path = os.path.join(output_directory, 'gamma.txt');
+    # numpy.savetxt(gamma_path, hdp._document_topic_distribution);
     
-    #topic_inactive_counts_path = os.path.join(output_directory, "topic_inactive_counts.txt");
-    #numpy.savetxt(topic_inactive_counts_path, hdp._topic_inactive_counts);
+    # topic_inactive_counts_path = os.path.join(output_directory, "topic_inactive_counts.txt");
+    # numpy.savetxt(topic_inactive_counts_path, hdp._topic_inactive_counts);
 
 if __name__ == '__main__':
     main()

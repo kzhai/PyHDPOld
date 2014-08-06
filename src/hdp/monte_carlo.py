@@ -1114,22 +1114,6 @@ class MonteCarlo(object):
                 component_log_likelihood[topic_index] = negative_infinity;
                 continue;
             
-            '''
-            #other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
-            other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[proposed_K - 1]);
-            other_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[proposed_K - 1] + proposed_n_dt[document_index][table_index]);
-            for word_id in selected_word_freq_dist.keys():
-                other_topic_probability += scipy.special.gammaln(proposed_n_kv[proposed_K - 1, word_id] + self._alpha_eta + selected_word_freq_dist[word_id]);
-                other_topic_probability -= scipy.special.gammaln(proposed_n_kv[proposed_K - 1, word_id] + self._alpha_eta);
-                #other_topic_probability -= scipy.special.gammaln(self._alpha_eta);
-                
-            topic_log_probability[self._K] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
-            topic_log_probability[self._K] -= scipy.special.gammaln(self._n_dt[document_index][table_index] + self._vocabulary_size * self._alpha_eta);
-            for word_id in selected_word_freq_dist.keys():
-                topic_log_probability[self._K] += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._alpha_eta)
-                topic_log_probability[self._K] -= scipy.special.gammaln(self._alpha_eta);
-            '''
-            
             # compute the probability of being in current cluster
             if topic_index == component_label:
                 component_log_likelihood[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);

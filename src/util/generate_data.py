@@ -4,26 +4,6 @@ import scipy;
 import optparse;
 import datetime;
 import os;
-
-#uninformed_count = 1.;
-#informed_count =  100.;
-
-#vocab = ['python', 'java', 'umiacs', 'clip', 'doctor', 'master'];
-#total_vocab = xrange(6);
-#total_topic = 3;
-#topic_vocab = 2;
-
-#topic = {};
-#topic[0] = numpy.array([informed_count, informed_count, uninformed_count, uninformed_count, uninformed_count, uninformed_count]);
-#topic[1] = numpy.array([uninformed_count, uninformed_count, informed_count, informed_count, uninformed_count, uninformed_count]);
-#topic[2] = numpy.array([uninformed_count, uninformed_count, uninformed_count, uninformed_count, informed_count, informed_count]);
-
-#for k in xrange(total_topic):
-#    topic[k] = FreqDist();
-#    for v in total_vocab:
-#        topic[k].inc(v, uninformed_count);
-#    topic[k].inc(k*topic_vocab, informed_count); 
-#    topic[k].inc(k*topic_vocab+1, informed_count);
     
 def parse_args():
     parser = optparse.OptionParser()
@@ -38,9 +18,9 @@ def parse_args():
     parser.add_option("--output_directory", type="string", dest="output_directory",
                       help="output directory [None]");
     parser.add_option("--number_of_topics", type="int", dest="number_of_topics",
-                      help="number of clusters [10]");
+                      help="number of topics [10]");
     parser.add_option("--number_of_documents", type="int", dest="number_of_documents",
-                      help="number of points [1000]");
+                      help="number of documents [1000]");
     parser.add_option("--asymmetric_alpha_prior", action='store_true', default=False, dest="asymmetric_alpha_prior",
                       help="asymmetric alpha prior [False]")
     

@@ -78,11 +78,14 @@ def main():
     # extract information from nohup.out files
     output_file = options.output_file;
     output_file_stream = open(output_file, "w");
+    output_file_stream.write("%s,%s,%s,%s\n" % ("inference", "topic", "vocabulary", "count"));
     
     (number_of_rows, number_of_columns) = n_kv.shape;
     for topic_index in xrange(number_of_rows):
         for vocab_index in xrange(number_of_columns):
-            output_file_stream.write("%s,%d,%d,%d\n" % ("true", topic_index + 1, vocab_index + 1, n_kv[topic_index, vocab_index]));    
+            if n_kv[topic_index, vocab_index]==0:
+                continue;
+            output_file_stream.write("%s,%d,%d,%d\n" % ("topic_truth", topic_index + 1, vocab_index + 1, n_kv[topic_index, vocab_index]));    
     
     output_directory = options.output_directory;
     snapshot_index = options.snapshot_index;
@@ -124,8 +127,16 @@ def main():
         
         n_kv = numpy.loadtxt(snapshot_file);
         (number_of_rows, number_of_columns) = n_kv.shape;
+        topic_rank = numpy.zeros(number_of_rows);
         for topic_index in xrange(number_of_rows):
             for vocab_index in xrange(number_of_columns):
+                topic_rank[topic_index] += vocab_index * n_kv[topic_index, vocab_index];
+        topic_order = numpy.argsort(topic_rank);
+        n_kv = n_kv[topic_order, :];
+        for topic_index in xrange(number_of_rows):
+            for vocab_index in xrange(number_of_columns):
+                if n_kv[topic_index, vocab_index]==0:
+                    continue;
                 output_file_stream.write("%s,%d,%d,%d\n" % (inference, topic_index + 1, vocab_index + 1, n_kv[topic_index, vocab_index]));    
         
         print "successfully parsed output %s..." % (model_name);

@@ -1,6 +1,7 @@
 #!/bin/bash
 
-DATA_PATH="140730-224558-k10-d1000-vpk10-wpd30-False"
+#DATA_PATH="140730-224558-k10-d1000-vpk10-wpd30-False"
+DATA_PATH="140806-165121-k5-d500-vpk5-wpd30-False"
 TRAINING_ITERATION=500
 
 PROJECT_HOME="/Users/kezhai/Workspace/PyHDP"

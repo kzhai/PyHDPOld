@@ -163,7 +163,7 @@ class MonteCarlo(object):
             
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
         model_parameter = self.compact_params(model_parameter);
-        self.model_assertion(model_parameter);
+        #self.model_assertion(model_parameter);
         return model_parameter;
 
     def parse_doc_list(self, docs):
@@ -211,7 +211,7 @@ class MonteCarlo(object):
     sample the data to train the parameters
     """
     def sample_cgs(self):
-        self.model_assertion();
+        #self.model_assertion();
         
         # sample the total data
         for document_index in numpy.random.permutation(xrange(self._D)):
@@ -345,7 +345,7 @@ class MonteCarlo(object):
         # compact all the parameters, including removing unused topics and unused tables
         self.compact_params();
         
-        self.model_assertion();
+        #self.model_assertion();
 
     def sample_tables(self, document_index, table_index):
         # if this table is empty, skip the sampling directly
@@ -466,13 +466,12 @@ class MonteCarlo(object):
                 sys.stderr.write("error: unrecognized split-merge heuristics %d...\n" % (self._split_merge_heuristics));
                 return;
             
-            self.model_assertion();
+            #self.model_assertion();
             if random_label_1 == random_label_2:
                 self.split_metropolis_hastings(random_label_1);
-                self.model_assertion();
             else:
                 self.merge_metropolis_hastings(random_label_1, random_label_2);
-                self.model_assertion();
+            #self.model_assertion();
 
     def split_metropolis_hastings(self, cluster_label):
         # record down the old cluster assignment
@@ -490,14 +489,14 @@ class MonteCarlo(object):
         proposed_k_dt = copy.deepcopy(self._k_dt);
         
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-        self.model_assertion(model_parameter);
+        #self.model_assertion(model_parameter);
         
         if self._split_proposal == 0:
             # perform random split for split proposal
             model_parameter = self.random_split(cluster_label, model_parameter);
             if model_parameter == None:
                 return;
-            self.model_assertion(model_parameter);
+            #self.model_assertion(model_parameter);
             
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             log_proposal_probability = (proposed_m_k[cluster_label] + proposed_m_k[proposed_K - 1] - 2) * numpy.log(2);
@@ -521,13 +520,11 @@ class MonteCarlo(object):
         elif self._split_proposal == 2:
             # perform sequential allocation gibbs sampling for split proposal
             model_parameter = self.sequential_allocation_split(cluster_label, model_parameter);
-            
             if model_parameter == None:
                 return;
-            self.model_assertion(model_parameter);
-            
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
-        
+            
+            #self.model_assertion(model_parameter);
             log_proposal_probability = (proposed_m_k[cluster_label] + proposed_m_k[proposed_K - 1] - 2) * numpy.log(2);
         else:
             sys.stderr.write("error: unrecognized split proposal strategy %d...\n" % (self._split_proposal));
@@ -553,10 +550,10 @@ class MonteCarlo(object):
             self._t_dv = proposed_t_dv;
             self._k_dt = proposed_k_dt;
         
-        self.model_assertion();
+        #self.model_assertion();
         
     def random_split(self, component_index, model_parameter):
-        self.model_assertion(model_parameter);
+        #self.model_assertion(model_parameter);
         
         # sample the data points set
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
@@ -578,7 +575,7 @@ class MonteCarlo(object):
         assert(len(proposed_m_k) == proposed_K);
 
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-        self.model_assertion(model_parameter);
+        #self.model_assertion(model_parameter);
 
         for document_index in numpy.random.permutation(xrange(self._D)):
             for table_index in numpy.random.permutation(xrange(len(proposed_k_dt[document_index]))):
@@ -641,7 +638,7 @@ class MonteCarlo(object):
             return None;
         else:
             model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-            self.model_assertion(model_parameter), proposed_m_k;
+            #self.model_assertion(model_parameter), proposed_m_k;
             return model_parameter
 
     def sequential_allocation_split(self, component_index, model_parameter):
@@ -751,7 +748,7 @@ class MonteCarlo(object):
         return model_parameter;
 
     def restrict_gibbs_sampling(self, cluster_index_1, cluster_index_2, model_parameter, restricted_gibbs_sampling_iteration=1):
-        self.model_assertion(model_parameter);
+        #self.model_assertion(model_parameter);
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
 
         document_table_indices = [];
@@ -850,7 +847,7 @@ class MonteCarlo(object):
                     proposed_n_kv[other_topic_id, word_id] += selected_word_freq_dist[word_id];
                     
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-        self.model_assertion(model_parameter);
+        #self.model_assertion(model_parameter);
         return model_parameter, transition_log_probability;
         
     def merge_metropolis_hastings(self, component_index_1, component_index_2):
@@ -874,12 +871,12 @@ class MonteCarlo(object):
         proposed_k_dt = copy.deepcopy(self._k_dt);
         
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-        self.model_assertion(model_parameter);
+        #self.model_assertion(model_parameter);
         
         if self._merge_proposal == 0:            
             # perform random merge for merge proposal
             model_parameter = self.random_merge(component_index_1, component_index_2, model_parameter);
-            self.model_assertion(model_parameter);
+            #self.model_assertion(model_parameter);
             
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             
@@ -887,7 +884,7 @@ class MonteCarlo(object):
         elif self._merge_proposal == 1:
             # perform restricted gibbs sampling for merge proposal
             model_parameter, transition_log_probability = self.restrict_gibbs_sampling(component_index_1, component_index_2, model_parameter, self._restrict_gibbs_sampling_iteration + 1);
-            self.model_assertion(model_parameter);
+            #self.model_assertion(model_parameter);
             
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             
@@ -926,7 +923,7 @@ class MonteCarlo(object):
             model_parameter = self.gibbs_sampling_merge(cluster_label, model_parameter);
             if model_parameter == None:
                 return;
-            self.model_assertion(model_parameter);
+            #self.model_assertion(model_parameter);
             
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             
@@ -966,11 +963,11 @@ class MonteCarlo(object):
             self._t_dv = proposed_t_dv;
             self._k_dt = proposed_k_dt;
         
-        self.model_assertion();
+        #self.model_assertion();
         
     def random_merge(self, component_index_1, component_index_2, model_parameter):
         assert component_index_2 > component_index_1;
-        self.model_assertion(model_parameter);
+        #self.model_assertion(model_parameter);
         
         # sample the data points set
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
@@ -1015,12 +1012,12 @@ class MonteCarlo(object):
         proposed_K -= 1;
         
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-        self.model_assertion(model_parameter);
+        #self.model_assertion(model_parameter);
         
         return model_parameter;
 
     def gibbs_sampling_merge(self, component_label, model_parameter):
-        self.model_assertion(model_parameter);
+        #self.model_assertion(model_parameter);
         
         new_label = self.propose_component_to_merge(component_label, model_parameter);
         
@@ -1034,7 +1031,7 @@ class MonteCarlo(object):
                 new_label = temp_label;
                 
             model_parameter = self.random_merge(new_label, component_label, model_parameter);
-            self.model_assertion(model_parameter);
+            #self.model_assertion(model_parameter);
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             print "merge operation granted from %s to %s" % (self._m_k, proposed_m_k);
             
@@ -1105,7 +1102,7 @@ class MonteCarlo(object):
         if self._K == 1:
             return;
         
-        self.model_assertion();
+        #self.model_assertion();
         
         assert numpy.all(self._m_k >= 0);
         
@@ -1144,7 +1141,7 @@ class MonteCarlo(object):
             
             print "merge cluster %d to %d after component resampling to %s..." % (old_component_label, new_component_label, self._m_k);
             
-            self.model_assertion();
+            #self.model_assertion();
 
         self.compact_params();
         
@@ -1172,14 +1169,14 @@ class MonteCarlo(object):
         assert self._n_dk.shape == (self._D, self._K);
         '''
 
-        self.model_assertion();
+        #self.model_assertion();
         
         return;
 
     """
     """
     def compact_params(self, model_parameter=None):
-        self.model_assertion(model_parameter);
+        #self.model_assertion(model_parameter);
         
         if model_parameter == None:
             K = self._K;
@@ -1233,12 +1230,12 @@ class MonteCarlo(object):
             self._t_dv = t_dv;
             self._k_dt = k_dt;
             
-            self.model_assertion();
+            #self.model_assertion();
             return
         else:
             model_parameter = (K, n_kv, m_k, n_dk, n_dt, t_dv, k_dt);
 
-            self.model_assertion(model_parameter);
+            #self.model_assertion(model_parameter);
             return model_parameter
 
     def log_posterior(self, model_parameter=None):

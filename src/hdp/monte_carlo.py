@@ -366,7 +366,7 @@ class MonteCarlo(object):
         
         topic_log_probability[self._K] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
         topic_log_probability[self._K] -= scipy.special.gammaln(self._n_dt[document_index][table_index] + self._vocabulary_size * self._alpha_eta);
-        for word_id in selected_word_freq_dist.keys():
+        for word_id in selected_word_freq_dist:
             topic_log_probability[self._K] += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._alpha_eta)
             topic_log_probability[self._K] -= scipy.special.gammaln(self._alpha_eta);
         #topic_log_probability[self._K] -= selected_word_freq_dist.N() * scipy.special.gammaln(self._alpha_eta);
@@ -387,7 +387,7 @@ class MonteCarlo(object):
                 # topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
                 topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] - self._n_dt[document_index][table_index]);
                 topic_log_probability[topic_index] -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]);
-                for word_id in selected_word_freq_dist.keys():
+                for word_id in selected_word_freq_dist:
                     topic_log_probability[topic_index] -= scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta - selected_word_freq_dist[word_id]);
                     topic_log_probability[topic_index] += scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta);
                     #topic_log_probability[topic_index] -= scipy.special.gammaln(self._alpha_eta);
@@ -397,7 +397,7 @@ class MonteCarlo(object):
                 # topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
                 topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]);
                 topic_log_probability[topic_index] -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] + self._n_dt[document_index][table_index]);
-                for word_id in selected_word_freq_dist.keys():
+                for word_id in selected_word_freq_dist:
                     topic_log_probability[topic_index] += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._n_kv[topic_index, word_id] + self._alpha_eta);
                     topic_log_probability[topic_index] -= scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta);
                     #topic_log_probability[topic_index] -= scipy.special.gammaln(self._alpha_eta);
@@ -442,7 +442,7 @@ class MonteCarlo(object):
         self._m_k[new_topic_id] += 1;
         self._n_dk[document_index, old_topic_id] -= self._n_dt[document_index][table_index];
         self._n_dk[document_index, new_topic_id] += self._n_dt[document_index][table_index];
-        for word_id in selected_word_freq_dist.keys():
+        for word_id in selected_word_freq_dist:
             self._n_kv[old_topic_id, word_id] -= selected_word_freq_dist[word_id];
             assert(self._n_kv[old_topic_id, word_id] >= 0)
             self._n_kv[new_topic_id, word_id] += selected_word_freq_dist[word_id];
@@ -623,7 +623,7 @@ class MonteCarlo(object):
                     
                     selected_word_index = numpy.nonzero(proposed_t_dv[document_index] == table_index)[0];
                     selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index][term] for term in list(selected_word_index)]);
-                    for word_index in selected_word_freq_dist.keys():
+                    for word_index in selected_word_freq_dist:
                         proposed_n_kv[component_index, word_index] -= selected_word_freq_dist[word_index];
                         proposed_n_kv[proposed_K - 1, word_index] += selected_word_freq_dist[word_index];
                     
@@ -685,7 +685,7 @@ class MonteCarlo(object):
         selected_word_index = numpy.nonzero(proposed_t_dv[document_index_1] == table_index_1)[0];
         # find the frequency distribution of the words sitting on the current table
         selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index_1][term] for term in list(selected_word_index)]);
-        for word_id in selected_word_freq_dist.keys():
+        for word_id in selected_word_freq_dist:
             proposed_n_kv[component_index, word_id] = selected_word_freq_dist[word_id];
         
         # initialize the new cluster
@@ -697,22 +697,21 @@ class MonteCarlo(object):
         selected_word_index = numpy.nonzero(proposed_t_dv[document_index_2] == table_index_2)[0];
         # find the frequency distribution of the words sitting on the current table
         selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index_2][term] for term in list(selected_word_index)]);
-        for word_id in selected_word_freq_dist.keys():
+        for word_id in selected_word_freq_dist:
             proposed_n_kv[proposed_K - 1, word_id] = selected_word_freq_dist[word_id];
-
+        
         # sequentially allocation all the rest points to different clusters
+        n_k = numpy.sum(proposed_n_kv, axis=1);
         for (document_index, table_index) in document_table_indices:
             selected_word_index = numpy.nonzero(proposed_t_dv[document_index] == table_index)[0];
             # find the frequency distribution of the words sitting on the current table
             selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index][term] for term in list(selected_word_index)]);
             
-            n_k = numpy.sum(proposed_n_kv, axis=1);
-            
             # compute the probability of being in current cluster
             #current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
             current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[component_index]);
             current_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[component_index] + proposed_n_dt[document_index][table_index]);
-            for word_id in selected_word_freq_dist.keys():
+            for word_id in selected_word_freq_dist:
                 current_topic_probability += scipy.special.gammaln(selected_word_freq_dist[word_id] + proposed_n_kv[component_index, word_id] + self._alpha_eta);
                 current_topic_probability -= scipy.special.gammaln(proposed_n_kv[component_index, word_id] + self._alpha_eta);
                 #current_topic_probability -= scipy.special.gammaln(self._alpha_eta);
@@ -722,7 +721,7 @@ class MonteCarlo(object):
             #other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
             other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[proposed_K - 1]);
             other_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[proposed_K - 1] + proposed_n_dt[document_index][table_index]);
-            for word_id in selected_word_freq_dist.keys():
+            for word_id in selected_word_freq_dist:
                 other_topic_probability += scipy.special.gammaln(proposed_n_kv[proposed_K - 1, word_id] + self._alpha_eta + selected_word_freq_dist[word_id]);
                 other_topic_probability -= scipy.special.gammaln(proposed_n_kv[proposed_K - 1, word_id] + self._alpha_eta);
                 #other_topic_probability -= scipy.special.gammaln(self._alpha_eta);
@@ -740,8 +739,10 @@ class MonteCarlo(object):
             proposed_k_dt[document_index][table_index] = new_label;
             proposed_m_k[new_label] += 1;
             proposed_n_dk[document_index, new_label] += proposed_n_dt[document_index][table_index];
-            for word_id in selected_word_freq_dist.keys():
+            for word_id in selected_word_freq_dist:
                 proposed_n_kv[new_label, word_id] += selected_word_freq_dist[word_id];
+                
+            n_k[new_label] += selected_word_freq_dist.N();
         
         assert proposed_m_k[component_index] > 0 and proposed_m_k[proposed_K - 1] > 0;
         
@@ -789,7 +790,7 @@ class MonteCarlo(object):
                     # if current table is the only table assigned to current topic,
                     current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
                     current_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + proposed_n_dt[document_index][table_index]);
-                    for word_id in selected_word_freq_dist.keys():
+                    for word_id in selected_word_freq_dist:
                         current_topic_probability += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._alpha_eta)
                         current_topic_probability -= scipy.special.gammaln(self._alpha_eta);
                     current_topic_probability += numpy.log(self._alpha_alpha);
@@ -798,7 +799,7 @@ class MonteCarlo(object):
                     #current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
                     current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[current_topic_id] - proposed_n_dt[document_index][table_index])
                     current_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[current_topic_id]);
-                    for word_id in selected_word_freq_dist.keys():
+                    for word_id in selected_word_freq_dist:
                         current_topic_probability += scipy.special.gammaln(proposed_n_kv[current_topic_id, word_id] + self._alpha_eta); 
                         current_topic_probability -= scipy.special.gammaln(proposed_n_kv[current_topic_id, word_id] + self._alpha_eta - selected_word_freq_dist[word_id]);
                         #current_topic_probability -= scipy.special.gammaln(self._alpha_eta);
@@ -809,7 +810,7 @@ class MonteCarlo(object):
                     # if current table is the only table assigned to current topic,
                     other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
                     other_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + proposed_n_dt[document_index][table_index]);
-                    for word_id in selected_word_freq_dist.keys():
+                    for word_id in selected_word_freq_dist:
                         other_topic_probability += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._alpha_eta)
                         other_topic_probability -= scipy.special.gammaln(self._alpha_eta);
                     other_topic_probability += numpy.log(self._alpha_alpha);
@@ -817,7 +818,7 @@ class MonteCarlo(object):
                     other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[other_topic_id]);
                     #other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
                     other_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[other_topic_id] + proposed_n_dt[document_index][table_index]);
-                    for word_id in selected_word_freq_dist.keys():
+                    for word_id in selected_word_freq_dist:
                         other_topic_probability += scipy.special.gammaln(proposed_n_kv[other_topic_id, word_id] + self._alpha_eta + selected_word_freq_dist[word_id]);
                         other_topic_probability -= scipy.special.gammaln(proposed_n_kv[other_topic_id, word_id] + self._alpha_eta);
                         #other_topic_probability -= scipy.special.gammaln(self._alpha_eta);
@@ -842,7 +843,7 @@ class MonteCarlo(object):
                 proposed_m_k[other_topic_id] += 1;
                 proposed_n_dk[document_index, current_topic_id] -= proposed_n_dt[document_index][table_index];
                 proposed_n_dk[document_index, other_topic_id] += proposed_n_dt[document_index][table_index];
-                for word_id in selected_word_freq_dist.keys():
+                for word_id in selected_word_freq_dist:
                     proposed_n_kv[current_topic_id, word_id] -= selected_word_freq_dist[word_id];
                     assert(proposed_n_kv[current_topic_id, word_id] >= 0)
                     proposed_n_kv[other_topic_id, word_id] += selected_word_freq_dist[word_id];

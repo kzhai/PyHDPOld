@@ -92,48 +92,6 @@ class MonteCarlo(object):
         # initialize the size of the collection, i.e., total number of documents.
         self._D = len(self._corpus)
         
-        '''
-        self._K = 1;
-        
-        # initialize the word count matrix indexed by topic id and word id, i.e., n_{\cdot \cdot k}^v
-        self._n_kv = numpy.zeros((self._K, self._vocabulary_size), dtype=numpy.int);
-        
-        # initialize the table count matrix indexed by topic id, i.e., m_{\cdot k}
-        self._m_k = numpy.zeros(self._K, dtype=numpy.int);
-        
-        # initialize the word count matrix indexed by topic id and document id, i.e., n_{j \cdot k}
-        self._n_dk = numpy.zeros((self._D, self._K), dtype=numpy.int);
-        
-        # random initialize all documents
-        
-        # initialize the table information vectors indexed by document id and word id, i.e., t{j i}
-        self._t_dv = {};
-        # initialize the topic information vectors indexed by document id and table id, i.e., k_{j t}
-        self._k_dt = {};
-        # initialize the word count vectors indexed by document id and table id, i.e., n_{j t \cdot}
-        self._n_dt = {};
-        
-        # we assume all words in a document belong to one table which was assigned to topic 0 
-        for d in xrange(self._D):
-            # initialize the table information vector indexed by document and records down which table a word belongs to 
-            self._t_dv[d] = numpy.zeros(len(self._corpus[d]), dtype=numpy.int);
-            
-            # self._k_dt records down which topic a table was assigned to
-            self._k_dt[d] = numpy.zeros(1, dtype=numpy.int);
-            assert (len(self._k_dt[d]) == len(numpy.unique(self._t_dv[d]))), (len(self._k_dt[d]), self._t_dv[d], len(numpy.unique(self._t_dv[d])));
-            
-            # word_count_table records down the number of words sit on every table
-            self._n_dt[d] = numpy.zeros(1, dtype=numpy.int) + len(self._corpus[d]);
-            assert(len(self._n_dt[d]) == len(numpy.unique(self._t_dv[d])));
-            assert(numpy.sum(self._n_dt[d]) == len(self._corpus[d]));
-            
-            for v in self._corpus[d]:
-                self._n_kv[0, v] += 1;
-            self._n_dk[d, 0] = len(self._corpus[d])
-            
-            self._m_k[0] += len(self._k_dt[d]);
-        '''
-        
         model_parameter = self.random_initialization(1, 1);
         #model_parameter = self.random_initialization();
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
@@ -1152,8 +1110,8 @@ class MonteCarlo(object):
         assert numpy.all(self._m_k >= 0);
         
         # sample cluster assignment for all the points in the current cluster
-        # for old_component_label in numpy.argsort(self._m_k):
-        for old_component_label in numpy.random.permutation(xrange(self._K)):
+        #for old_component_label in numpy.random.permutation(xrange(self._K)):
+        for old_component_label in numpy.argsort(self._m_k):
             # if this cluster is empty, no need to resample the cluster assignment
             if self._m_k[old_component_label] <= 0:
                 continue;

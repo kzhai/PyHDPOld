@@ -9,10 +9,11 @@ library(ggplot2)
 library(grid)
 library(scales)
 
-file_name="140730-224558-cluster-counts"
+#file_name="140730-224558-cluster-counts"
+file_name="140806-165121-cluster-counts"
 
-#project="/windows/d/Workspace/OnlineLDA/"
-project_home="/Users/kezhai/Workspace/PyHDP/"
+project_home="/windows/d/Workspace/PyHDP/"
+#project_home="/Users/kezhai/Workspace/PyHDP/"
 
 input_directory=paste(project_home, "result/", sep="");
 output_directory=paste(project_home, "figure/", sep="");
@@ -38,7 +39,7 @@ plot_pic <- qplot(vocabulary, factor(topic), data=input_data, size=count) +
 	theme(legend.title = element_text(size = 12, angle = 0), legend.text = element_text(size = 15)) +
 	guides(colour = guide_legend(nrow = 1)) +
 		
-	coord_cartesian(xlim=c(0, 10, 100)) +
+	#coord_cartesian(xlim=c(0, 10, 100)) +
 	#coord_cartesian(ylim=c(0, 13, 2)) +
 	#scale_y_continuous(breaks = round(seq(-6000, -4000, by=1000), 1)) +
 	#scale_x_continuous(breaks = round(seq(1, 500, by=100), 1)) + 

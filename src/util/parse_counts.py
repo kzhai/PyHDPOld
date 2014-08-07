@@ -85,7 +85,7 @@ def main():
         for vocab_index in xrange(number_of_columns):
             if n_kv[topic_index, vocab_index]==0:
                 continue;
-            output_file_stream.write("%s,%d,%d,%d\n" % ("topic_truth", topic_index + 1, vocab_index + 1, n_kv[topic_index, vocab_index]));    
+            output_file_stream.write("%s,%d,%d,%d\n" % ("true", topic_index + 1, vocab_index + 1, n_kv[topic_index, vocab_index]));    
     
     output_directory = options.output_directory;
     snapshot_index = options.snapshot_index;

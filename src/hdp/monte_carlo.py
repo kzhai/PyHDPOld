@@ -369,6 +369,7 @@ class MonteCarlo(object):
         for word_id in selected_word_freq_dist.keys():
             topic_log_probability[self._K] += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._alpha_eta)
             topic_log_probability[self._K] -= scipy.special.gammaln(self._alpha_eta);
+        #topic_log_probability[self._K] -= selected_word_freq_dist.N() * scipy.special.gammaln(self._alpha_eta);
         topic_log_probability[self._K] += numpy.log(self._alpha_alpha);
         
         n_k = numpy.sum(self._n_kv, axis=1);

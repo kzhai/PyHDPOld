@@ -27,7 +27,7 @@ negative_infinity = -1e500;
 # We will be taking log(0) = -Inf, so turn off this warning
 numpy.seterr(divide='ignore')
 
-numpy.random.seed(100)
+#numpy.random.seed(100)
 
 class MonteCarlo(object):
     """

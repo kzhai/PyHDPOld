@@ -98,20 +98,20 @@ def main():
         if re.match(split_merge_proposal_pattern, model_name):
             m = re.match(split_merge_proposal_pattern, model_name);
             if int(m.group("sp")) == 0 and int(m.group("mp")) == 0:
-                inference = "random";
+                inference = "rand";
             elif int(m.group("sp")) == 1 and int(m.group("mp")) == 1:
-                inference = "res_gibbs";
+                inference = "rgs";
             elif int(m.group("sp")) == 2 and int(m.group("mp")) == 0:
-                inference = "seq_alloc";
+                inference = "sa";
             else:
                 print "unrecognized model patterns %s" % model_name
                 continue;
         elif re.match(split_merge_heuristics_pattern, model_name):
             m = re.match(split_merge_heuristics_pattern, model_name);
             if int(m.group("smh")) == 0:
-                inference = "com_resam"
+                inference = "crs"
             elif int(m.group("smh")) == 1:
-                inference = "random"
+                inference = "rand"
             else:
                 print "unrecognized model patterns %s" % model_name
                 continue;

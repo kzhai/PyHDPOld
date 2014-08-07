@@ -549,12 +549,13 @@ class MonteCarlo(object):
             # split a singleton cluster
             if model_parameter == None:
                 return;
-            self.model_assertion(model_parameter);
-            
-            model_parameter, transition_log_probability = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter, self._restrict_gibbs_sampling_iteration + 1);
-            self.model_assertion(model_parameter);
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
-            
+                        
+            #self.model_assertion(model_parameter);
+            model_parameter, transition_log_probability = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter, self._restrict_gibbs_sampling_iteration + 1);
+            (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
+            #self.model_assertion(model_parameter);
+
             if proposed_m_k[cluster_label] == 0 or proposed_m_k[proposed_K - 1] == 0:
                 return;
             
@@ -803,10 +804,11 @@ class MonteCarlo(object):
                     
                 if len(document_table_indices) == proposed_m_k[cluster_index_1] + proposed_m_k[cluster_index_2]:
                     break;
+
             if len(document_table_indices) == proposed_m_k[cluster_index_1] + proposed_m_k[cluster_index_2]:
                     break;
                 
-        assert len(document_table_indices) == proposed_m_k[cluster_index_1] + proposed_m_k[cluster_index_2];
+        assert len(document_table_indices) == proposed_m_k[cluster_index_1] + proposed_m_k[cluster_index_2], (len(document_table_indices), proposed_m_k, cluster_index_1, cluster_index_2);
         
         for restricted_gibbs_sampling_iteration_index in xrange(restricted_gibbs_sampling_iteration):
             transition_log_probability = 0;

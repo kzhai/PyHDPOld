@@ -12,8 +12,8 @@ library(scales)
 #file_name="140730-224558-cluster-counts"
 file_name="140806-165121-cluster-counts"
 
-project_home="/windows/d/Workspace/PyHDP/"
-#project_home="/Users/kezhai/Workspace/PyHDP/"
+#project_home="/windows/d/Workspace/PyHDP/"
+project_home="/Users/kezhai/Workspace/PyHDP/"
 
 input_directory=paste(project_home, "result/", sep="");
 output_directory=paste(project_home, "figure/", sep="");

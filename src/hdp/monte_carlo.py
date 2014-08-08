@@ -92,7 +92,7 @@ class MonteCarlo(object):
         # initialize the size of the collection, i.e., total number of documents.
         self._D = len(self._corpus)
         
-        model_parameter = self.random_initialization(5, 2);
+        model_parameter = self.random_initialization(1, 1);
         #model_parameter = self.random_initialization();
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             

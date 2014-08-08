@@ -20,7 +20,7 @@ def parse_args():
                         input_directory=None,
                         output_directory=None,
                         output_file=None,
-                        snapshot_index=500
+                        snapshot_index=1000
                         )
     # parameter set 1
     parser.add_option("--input_directory", type="string", dest="input_directory",

@@ -29,7 +29,7 @@ input_data <- read.csv(input_file)
 plot_pic <- qplot(vocabulary, factor(topic), data=input_data, size=count) +
 	facet_grid(inference ~ ., scales="free", space="free") +
 	labs(size="Tokens Count") +
-	labs(x="Vocabulary", y="Topic") +
+	labs(x="Word Index", y="Topic Index") +
 
 	#scale_x_log10() +
 
@@ -48,7 +48,7 @@ plot_pic <- qplot(vocabulary, factor(topic), data=input_data, size=count) +
 	#theme(legend.direction='vertical', legend.box='vertical', legend.position = c(0, 0), legend.justification = c(0, 1)) +
 	theme(axis.text.x = element_text(size = 15, colour = "black")) +
 	theme(axis.text.y = element_text(size = 15, colour = "black")) +
-	theme(axis.title.x = element_text(size = 12), axis.title.y = element_text(size = 15, angle = 90)) +
+	theme(axis.title.x = element_text(size = 15), axis.title.y = element_text(size = 15, angle = 90)) +
 	theme(strip.text.x = element_text(size = 15), strip.text.y = element_text(size = 15, angle = -90))
 					
 ggsave(plot_pic,filename=output_file);

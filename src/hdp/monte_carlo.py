@@ -27,7 +27,7 @@ negative_infinity = -1e500;
 # We will be taking log(0) = -Inf, so turn off this warning
 numpy.seterr(divide='ignore')
 
-#numpy.random.seed(100)
+# numpy.random.seed(100)
 
 class MonteCarlo(object):
     """
@@ -40,6 +40,7 @@ class MonteCarlo(object):
                  merge_proposal=0,
                  split_merge_iteration=1,
                  restrict_gibbs_sampling_iteration=10,
+                 hyper_parameter_interval=10,
                  hash_oov_words=False
                  ):
         self._split_merge_heuristics = split_merge_heuristics;
@@ -48,6 +49,8 @@ class MonteCarlo(object):
         
         self._split_merge_iteration = split_merge_iteration;
         self._restrict_gibbs_sampling_iteration = restrict_gibbs_sampling_iteration;
+
+        self._hyper_parameter_interval = hyper_parameter_interval;
 
         self._hash_oov_words = hash_oov_words;
         
@@ -93,7 +96,7 @@ class MonteCarlo(object):
         self._D = len(self._corpus)
         
         model_parameter = self.random_initialization(1, 1);
-        #model_parameter = self.random_initialization();
+        # model_parameter = self.random_initialization();
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             
         self._K = proposed_K;
@@ -163,7 +166,7 @@ class MonteCarlo(object):
             
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
         model_parameter = self.compact_params(model_parameter);
-        #self.model_assertion(model_parameter);
+        # self.model_assertion(model_parameter);
         return model_parameter;
 
     def parse_doc_list(self, docs):
@@ -201,6 +204,9 @@ class MonteCarlo(object):
                 self.resample_components();
         elif self._split_merge_heuristics > 0:
             self.split_merge();
+            
+        if self._iteration_counter % self._hyper_parameter_interval == 0:
+            self.optimize_hyperparameters();
     
         print "accumulated number of tables:", self._m_k;
         print "accumulated number of tokens:", numpy.sum(self._n_kv, axis=1)[:, numpy.newaxis].T;
@@ -211,13 +217,13 @@ class MonteCarlo(object):
     sample the data to train the parameters
     """
     def sample_cgs(self):
-        #self.model_assertion();
+        # self.model_assertion();
         
         # sample the total data
-        #for document_index in numpy.random.permutation(xrange(self._D)):
+        # for document_index in numpy.random.permutation(xrange(self._D)):
         for document_index in xrange(self._D):
             # sample word assignment, see which table it should belong to
-            #for word_index in numpy.random.permutation(xrange(len(self._corpus[document_index]))):
+            # for word_index in numpy.random.permutation(xrange(len(self._corpus[document_index]))):
             for word_index in xrange(len(self._corpus[document_index])):
                 # get the word_id of at the word_index of the document_index
                 word_id = self._corpus[document_index][word_index];
@@ -362,14 +368,14 @@ class MonteCarlo(object):
                 assert(numpy.all(self._k_dt[document_index] >= 0));
                 
             # sample table assignment, see which topic it should belong to
-            #for table_index in numpy.random.permutation(xrange(len(self._k_dt[document_index]))):
+            # for table_index in numpy.random.permutation(xrange(len(self._k_dt[document_index]))):
             for table_index in xrange(len(self._k_dt[document_index])):
                 self.sample_tables(document_index, table_index);
             
         # compact all the parameters, including removing unused topics and unused tables
         self.compact_params();
         
-        #self.model_assertion();
+        # self.model_assertion();
 
     def sample_tables(self, document_index, table_index):
         # if this table is empty, skip the sampling directly
@@ -401,7 +407,7 @@ class MonteCarlo(object):
         for word_id in selected_word_freq_dist:
             topic_log_probability[self._K] += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._alpha_eta)
             topic_log_probability[self._K] -= scipy.special.gammaln(self._alpha_eta);
-        #topic_log_probability[self._K] -= selected_word_freq_dist.N() * scipy.special.gammaln(self._alpha_eta);
+        # topic_log_probability[self._K] -= selected_word_freq_dist.N() * scipy.special.gammaln(self._alpha_eta);
         topic_log_probability[self._K] += numpy.log(self._alpha_alpha);
         
         n_k = numpy.sum(self._n_kv, axis=1);
@@ -414,38 +420,6 @@ class MonteCarlo(object):
             topic_log_probability[:self._K] -= scipy.special.gammaln(self._n_kv[:, word_id] + self._alpha_eta);
         # compute the prior if we move this table from this topic
         topic_log_probability[:self._K] += numpy.log(self._m_k);
-        
-        '''
-        for topic_index in xrange(self._K):
-            # if there are other tables assigned to current topic
-            if topic_index == old_topic_id:
-                # if current table is the only table assigned to current topic,
-                if self._m_k[topic_index] <= 1:
-                    # it means this topic is probably less useful or less generalizable to other documents,
-                    # it makes more sense to collapse this topic and hence assign this table to other topic.
-                    topic_log_probability[topic_index] = negative_infinity;
-                    continue;
-                
-                # topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
-                topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] - self._n_dt[document_index][table_index]);
-                topic_log_probability[topic_index] -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]);
-                for word_id in selected_word_freq_dist:
-                    topic_log_probability[topic_index] -= scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta - selected_word_freq_dist[word_id]);
-                    topic_log_probability[topic_index] += scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta);
-                    #topic_log_probability[topic_index] -= scipy.special.gammaln(self._alpha_eta);
-                # compute the prior if we move this table from this topic
-                topic_log_probability[topic_index] += numpy.log(self._m_k[topic_index] - 1);
-            else:
-                # topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
-                topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]);
-                topic_log_probability[topic_index] -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] + self._n_dt[document_index][table_index]);
-                for word_id in selected_word_freq_dist:
-                    topic_log_probability[topic_index] += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._n_kv[topic_index, word_id] + self._alpha_eta);
-                    topic_log_probability[topic_index] -= scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta);
-                    #topic_log_probability[topic_index] -= scipy.special.gammaln(self._alpha_eta);
-                # compute the prior if we move this table from this topic
-                topic_log_probability[topic_index] += numpy.log(self._m_k[topic_index]);
-        '''
 
         # normalize the distribution and sample new topic assignment for this topic
         # topic_log_probability = numpy.exp(topic_log_probability);
@@ -480,107 +454,42 @@ class MonteCarlo(object):
         self._n_dk[document_index, new_topic_id] += self._n_dt[document_index][table_index];
         for word_id in selected_word_freq_dist:
             self._n_kv[new_topic_id, word_id] += selected_word_freq_dist[word_id];
-            
-    '''
-    def sample_tables(self, document_index, table_index):
-        # if this table is empty, skip the sampling directly
-        if self._n_dt[document_index][table_index] <= 0:
-            return;
-            
-        old_topic_id = self._k_dt[document_index][table_index];
 
-        # find the index of the words sitting on the current table
-        selected_word_index = numpy.nonzero(self._t_dv[document_index] == table_index)[0];
-        # find the frequency distribution of the words sitting on the current table
-        selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index][term] for term in list(selected_word_index)]);
-        
-        assert (self._n_dt[document_index][table_index] == selected_word_freq_dist.N());
+    """
+    """
+    def optimize_hyperparameters(self, hyperparameter_samples=10, hyperparameter_step_size=1.0, hyperparameter_maximum_iteration=10):
+        old_hyper_parameters = [self._alpha_alpha, self._alpha_gamma, self._alpha_eta];
+        old_hyper_parameters = numpy.asarray(old_hyper_parameters);
+        old_log_hyper_parameters = numpy.log(old_hyper_parameters);
 
-        # compute the probability of assigning current table every topic
-        topic_log_probability = numpy.zeros(self._K + 1);
-        
-        topic_log_probability[self._K] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
-        topic_log_probability[self._K] -= scipy.special.gammaln(self._n_dt[document_index][table_index] + self._vocabulary_size * self._alpha_eta);
-        for word_id in selected_word_freq_dist:
-            topic_log_probability[self._K] += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._alpha_eta)
-            topic_log_probability[self._K] -= scipy.special.gammaln(self._alpha_eta);
-        #topic_log_probability[self._K] -= selected_word_freq_dist.N() * scipy.special.gammaln(self._alpha_eta);
-        topic_log_probability[self._K] += numpy.log(self._alpha_alpha);
-        
-        n_k = numpy.sum(self._n_kv, axis=1);
-        assert(len(n_k) == (self._K))
-        for topic_index in xrange(self._K):
-            # if there are other tables assigned to current topic
-            if topic_index == old_topic_id:
-                # if current table is the only table assigned to current topic,
-                if self._m_k[topic_index] <= 1:
-                    # it means this topic is probably less useful or less generalizable to other documents,
-                    # it makes more sense to collapse this topic and hence assign this table to other topic.
-                    topic_log_probability[topic_index] = negative_infinity;
-                    continue;
-                
-                # topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
-                topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] - self._n_dt[document_index][table_index]);
-                topic_log_probability[topic_index] -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]);
-                for word_id in selected_word_freq_dist:
-                    topic_log_probability[topic_index] -= scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta - selected_word_freq_dist[word_id]);
-                    topic_log_probability[topic_index] += scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta);
-                    #topic_log_probability[topic_index] -= scipy.special.gammaln(self._alpha_eta);
-                # compute the prior if we move this table from this topic
-                topic_log_probability[topic_index] += numpy.log(self._m_k[topic_index] - 1);
-            else:
-                # topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
-                topic_log_probability[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]);
-                topic_log_probability[topic_index] -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] + self._n_dt[document_index][table_index]);
-                for word_id in selected_word_freq_dist:
-                    topic_log_probability[topic_index] += scipy.special.gammaln(selected_word_freq_dist[word_id] + self._n_kv[topic_index, word_id] + self._alpha_eta);
-                    topic_log_probability[topic_index] -= scipy.special.gammaln(self._n_kv[topic_index, word_id] + self._alpha_eta);
-                    #topic_log_probability[topic_index] -= scipy.special.gammaln(self._alpha_eta);
-                # compute the prior if we move this table from this topic
-                topic_log_probability[topic_index] += numpy.log(self._m_k[topic_index]);
+        for ii in xrange(hyperparameter_samples):
+            log_likelihood_old = self.log_posterior()
+            log_likelihood_new = numpy.log(numpy.random.random()) + log_likelihood_old
+            # print("OLD: %f\tNEW: %f at (%f, %f)" % (log_likelihood_old, log_likelihood_new, self._alpha, self._beta))
 
-        # normalize the distribution and sample new topic assignment for this topic
-        # topic_log_probability = numpy.exp(topic_log_probability);
-        # topic_log_probability = topic_log_probability/numpy.sum(topic_log_probability);
-        # topic_log_probability = numpy.exp(log_normalize(topic_log_probability));
-        topic_log_probability -= scipy.misc.logsumexp(topic_log_probability);
-        topic_probability = numpy.exp(topic_log_probability);
-        # print topic_probability
-        
-        cdf = numpy.cumsum(topic_probability);
-        new_topic_id = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
-        
-        if new_topic_id == old_topic_id:
-            return;
-    
-        # if the table is assigned to a new topic
-        if new_topic_id == self._K:
-            if self._m_k[old_topic_id] <= 1:
-                # if old topic is empty, reuse it
-                new_topic_id = old_topic_id
-            else:
-                # else expand all matrices to fit new topics
-                self._K += 1;
-                self._n_kv = numpy.vstack((self._n_kv, numpy.zeros((1, self._vocabulary_size), dtype=numpy.int)));
-                assert(self._n_kv.shape == (self._K, self._vocabulary_size));
-                self._n_dk = numpy.hstack((self._n_dk, numpy.zeros((self._D, 1), dtype=numpy.int)));
-                assert(self._n_dk.shape == (self._D, self._K));
-                self._m_k = numpy.hstack((self._m_k, numpy.zeros(1, dtype=numpy.int)));
-                assert(len(self._m_k) == self._K);
-            
-        # assign this table to new topic
-        self._k_dt[document_index][table_index] = new_topic_id;
-        
-        # adjust the statistics of all model parameter
-        self._m_k[old_topic_id] -= 1;
-        self._m_k[new_topic_id] += 1;
-        self._n_dk[document_index, old_topic_id] -= self._n_dt[document_index][table_index];
-        self._n_dk[document_index, new_topic_id] += self._n_dt[document_index][table_index];
-        for word_id in selected_word_freq_dist:
-            self._n_kv[old_topic_id, word_id] -= selected_word_freq_dist[word_id];
-            assert(self._n_kv[old_topic_id, word_id] >= 0)
-            self._n_kv[new_topic_id, word_id] += selected_word_freq_dist[word_id];
-    '''
+            l = old_log_hyper_parameters - numpy.random.random(len(old_log_hyper_parameters)) * hyperparameter_step_size;
+            r = old_log_hyper_parameters + hyperparameter_step_size;
+
+            for jj in xrange(hyperparameter_maximum_iteration):
+                new_log_hyper_parameters = l + numpy.random.random(len(old_log_hyper_parameters)) * (r - l);
+                lp_test = self.log_posterior(None, numpy.exp(new_log_hyper_parameters));
+
+                if lp_test > log_likelihood_new:
+                    self._alpha_alpha = numpy.exp(new_log_hyper_parameters[0]);
+                    self._alpha_gamma = numpy.exp(new_log_hyper_parameters[1])
+                    self._alpha_eta = numpy.exp(new_log_hyper_parameters[2]);
+                    old_log_hyper_parameters = new_log_hyper_parameters;
+                    break
+                else:
+                    for dd in xrange(len(new_log_hyper_parameters)):
+                        if new_log_hyper_parameters[dd] < old_log_hyper_parameters[dd]:
+                            l[dd] = new_log_hyper_parameters[dd]
+                        else:
+                            r[dd] = new_log_hyper_parameters[dd]
+                        assert l[dd] <= old_log_hyper_parameters[dd]
+                        assert r[dd] >= old_log_hyper_parameters[dd]
+                        
+            print "Update hyperparameter to %s" % (numpy.exp(new_log_hyper_parameters));
     
     def split_merge(self):
         for iteration in xrange(self._split_merge_iteration):
@@ -602,12 +511,12 @@ class MonteCarlo(object):
                 sys.stderr.write("error: unrecognized split-merge heuristics %d...\n" % (self._split_merge_heuristics));
                 return;
             
-            #self.model_assertion();
+            # self.model_assertion();
             if random_label_1 == random_label_2:
                 self.split_metropolis_hastings(random_label_1);
             else:
                 self.merge_metropolis_hastings(random_label_1, random_label_2);
-            #self.model_assertion();
+            # self.model_assertion();
 
     def split_metropolis_hastings(self, cluster_label):
         # record down the old cluster assignment
@@ -625,14 +534,14 @@ class MonteCarlo(object):
         proposed_k_dt = copy.deepcopy(self._k_dt);
         
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-        #self.model_assertion(model_parameter);
+        # self.model_assertion(model_parameter);
         
         if self._split_proposal == 0:
             # perform random split for split proposal
             model_parameter = self.random_split(cluster_label, model_parameter);
             if model_parameter == None:
                 return;
-            #self.model_assertion(model_parameter);
+            # self.model_assertion(model_parameter);
             
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             log_proposal_probability = (proposed_m_k[cluster_label] + proposed_m_k[proposed_K - 1] - 2) * numpy.log(2);
@@ -644,10 +553,10 @@ class MonteCarlo(object):
                 return;
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
                         
-            #self.model_assertion(model_parameter);
+            # self.model_assertion(model_parameter);
             model_parameter, transition_log_probability = self.restrict_gibbs_sampling(cluster_label, proposed_K - 1, model_parameter, self._restrict_gibbs_sampling_iteration + 1);
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
-            #self.model_assertion(model_parameter);
+            # self.model_assertion(model_parameter);
 
             if proposed_m_k[cluster_label] == 0 or proposed_m_k[proposed_K - 1] == 0:
                 return;
@@ -660,7 +569,7 @@ class MonteCarlo(object):
                 return;
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             
-            #self.model_assertion(model_parameter);
+            # self.model_assertion(model_parameter);
             log_proposal_probability = (proposed_m_k[cluster_label] + proposed_m_k[proposed_K - 1] - 2) * numpy.log(2);
         else:
             sys.stderr.write("error: unrecognized split proposal strategy %d...\n" % (self._split_proposal));
@@ -686,10 +595,10 @@ class MonteCarlo(object):
             self._t_dv = proposed_t_dv;
             self._k_dt = proposed_k_dt;
         
-        #self.model_assertion();
+        # self.model_assertion();
         
     def random_split(self, component_index, model_parameter):
-        #self.model_assertion(model_parameter);
+        # self.model_assertion(model_parameter);
         
         # sample the data points set
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
@@ -711,11 +620,11 @@ class MonteCarlo(object):
         assert(len(proposed_m_k) == proposed_K);
 
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-        #self.model_assertion(model_parameter);
+        # self.model_assertion(model_parameter);
 
-        #for document_index in numpy.random.permutation(xrange(self._D)):
+        # for document_index in numpy.random.permutation(xrange(self._D)):
         for document_index in xrange(self._D):
-            #for table_index in numpy.random.permutation(xrange(len(proposed_k_dt[document_index]))):
+            # for table_index in numpy.random.permutation(xrange(len(proposed_k_dt[document_index]))):
             for table_index in xrange(len(proposed_k_dt[document_index])):
                 if proposed_k_dt[document_index][table_index] != component_index:
                     continue;
@@ -776,7 +685,7 @@ class MonteCarlo(object):
             return None;
         else:
             model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-            #self.model_assertion(model_parameter), proposed_m_k;
+            # self.model_assertion(model_parameter), proposed_m_k;
             return model_parameter
 
     def sequential_allocation_split(self, component_index, model_parameter):
@@ -845,23 +754,23 @@ class MonteCarlo(object):
             selected_word_freq_dist = nltk.probability.FreqDist([self._corpus[document_index][term] for term in list(selected_word_index)]);
             
             # compute the probability of being in current cluster
-            #current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
+            # current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
             current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[component_index]);
             current_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[component_index] + proposed_n_dt[document_index][table_index]);
             for word_id in selected_word_freq_dist:
                 current_topic_probability += scipy.special.gammaln(selected_word_freq_dist[word_id] + proposed_n_kv[component_index, word_id] + self._alpha_eta);
                 current_topic_probability -= scipy.special.gammaln(proposed_n_kv[component_index, word_id] + self._alpha_eta);
-                #current_topic_probability -= scipy.special.gammaln(self._alpha_eta);
+                # current_topic_probability -= scipy.special.gammaln(self._alpha_eta);
             current_topic_probability += numpy.log(proposed_m_k[component_index]);
             
             # compute the probability of being in other cluster
-            #other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
+            # other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
             other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[proposed_K - 1]);
             other_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[proposed_K - 1] + proposed_n_dt[document_index][table_index]);
             for word_id in selected_word_freq_dist:
                 other_topic_probability += scipy.special.gammaln(proposed_n_kv[proposed_K - 1, word_id] + self._alpha_eta + selected_word_freq_dist[word_id]);
                 other_topic_probability -= scipy.special.gammaln(proposed_n_kv[proposed_K - 1, word_id] + self._alpha_eta);
-                #other_topic_probability -= scipy.special.gammaln(self._alpha_eta);
+                # other_topic_probability -= scipy.special.gammaln(self._alpha_eta);
             other_topic_probability += numpy.log(proposed_m_k[proposed_K - 1]);
             
             # sample a new cluster label for current table
@@ -887,7 +796,7 @@ class MonteCarlo(object):
         return model_parameter;
 
     def restrict_gibbs_sampling(self, cluster_index_1, cluster_index_2, model_parameter, restricted_gibbs_sampling_iteration=1):
-        #self.model_assertion(model_parameter);
+        # self.model_assertion(model_parameter);
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
 
         document_table_indices = [];
@@ -933,13 +842,13 @@ class MonteCarlo(object):
                     current_topic_probability += numpy.log(self._alpha_alpha);
                 else:
                     # if there are other tables assigned to current topic
-                    #current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
+                    # current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
                     current_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[current_topic_id] - proposed_n_dt[document_index][table_index])
                     current_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[current_topic_id]);
                     for word_id in selected_word_freq_dist:
                         current_topic_probability += scipy.special.gammaln(proposed_n_kv[current_topic_id, word_id] + self._alpha_eta); 
                         current_topic_probability -= scipy.special.gammaln(proposed_n_kv[current_topic_id, word_id] + self._alpha_eta - selected_word_freq_dist[word_id]);
-                        #current_topic_probability -= scipy.special.gammaln(self._alpha_eta);
+                        # current_topic_probability -= scipy.special.gammaln(self._alpha_eta);
                     # compute the prior if we move this table from this topic
                     current_topic_probability += numpy.log(proposed_m_k[current_topic_id] - 1);
                 
@@ -953,12 +862,12 @@ class MonteCarlo(object):
                     other_topic_probability += numpy.log(self._alpha_alpha);
                 else:
                     other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[other_topic_id]);
-                    #other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
+                    # other_topic_probability = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
                     other_topic_probability -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[other_topic_id] + proposed_n_dt[document_index][table_index]);
                     for word_id in selected_word_freq_dist:
                         other_topic_probability += scipy.special.gammaln(proposed_n_kv[other_topic_id, word_id] + self._alpha_eta + selected_word_freq_dist[word_id]);
                         other_topic_probability -= scipy.special.gammaln(proposed_n_kv[other_topic_id, word_id] + self._alpha_eta);
-                        #other_topic_probability -= scipy.special.gammaln(self._alpha_eta);
+                        # other_topic_probability -= scipy.special.gammaln(self._alpha_eta);
                     other_topic_probability += numpy.log(proposed_m_k[other_topic_id]);
                     
                 # sample a new cluster label for current point
@@ -986,7 +895,7 @@ class MonteCarlo(object):
                     proposed_n_kv[other_topic_id, word_id] += selected_word_freq_dist[word_id];
                     
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-        #self.model_assertion(model_parameter);
+        # self.model_assertion(model_parameter);
         return model_parameter, transition_log_probability;
         
     def merge_metropolis_hastings(self, component_index_1, component_index_2):
@@ -1010,12 +919,12 @@ class MonteCarlo(object):
         proposed_k_dt = copy.deepcopy(self._k_dt);
         
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-        #self.model_assertion(model_parameter);
+        # self.model_assertion(model_parameter);
         
         if self._merge_proposal == 0:            
             # perform random merge for merge proposal
             model_parameter = self.random_merge(component_index_1, component_index_2, model_parameter);
-            #self.model_assertion(model_parameter);
+            # self.model_assertion(model_parameter);
             
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             
@@ -1023,7 +932,7 @@ class MonteCarlo(object):
         elif self._merge_proposal == 1:
             # perform restricted gibbs sampling for merge proposal
             model_parameter, transition_log_probability = self.restrict_gibbs_sampling(component_index_1, component_index_2, model_parameter, self._restrict_gibbs_sampling_iteration + 1);
-            #self.model_assertion(model_parameter);
+            # self.model_assertion(model_parameter);
             
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             
@@ -1062,7 +971,7 @@ class MonteCarlo(object):
             model_parameter = self.gibbs_sampling_merge(cluster_label, model_parameter);
             if model_parameter == None:
                 return;
-            #self.model_assertion(model_parameter);
+            # self.model_assertion(model_parameter);
             
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             
@@ -1102,11 +1011,11 @@ class MonteCarlo(object):
             self._t_dv = proposed_t_dv;
             self._k_dt = proposed_k_dt;
         
-        #self.model_assertion();
+        # self.model_assertion();
         
     def random_merge(self, component_index_1, component_index_2, model_parameter):
         assert component_index_2 > component_index_1;
-        #self.model_assertion(model_parameter);
+        # self.model_assertion(model_parameter);
         
         # sample the data points set
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
@@ -1116,9 +1025,9 @@ class MonteCarlo(object):
         else:
             number_of_unvisited_target_tables = proposed_m_k[component_index_2] + proposed_m_k[proposed_K - 1];
         
-        #for document_index in numpy.random.permutation(xrange(self._D)):
+        # for document_index in numpy.random.permutation(xrange(self._D)):
         for document_index in xrange(self._D):
-            #for table_index in numpy.random.permutation(xrange(len(proposed_k_dt[document_index]))):
+            # for table_index in numpy.random.permutation(xrange(len(proposed_k_dt[document_index]))):
             for table_index in xrange(len(proposed_k_dt[document_index])):
                 if proposed_k_dt[document_index][table_index] == component_index_2:
                     # merge component_index_2 with component_index_1
@@ -1153,12 +1062,12 @@ class MonteCarlo(object):
         proposed_K -= 1;
         
         model_parameter = (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt);
-        #self.model_assertion(model_parameter);
+        # self.model_assertion(model_parameter);
         
         return model_parameter;
 
     def gibbs_sampling_merge(self, component_label, model_parameter):
-        #self.model_assertion(model_parameter);
+        # self.model_assertion(model_parameter);
         
         new_label = self.propose_component_to_merge(component_label, model_parameter);
         
@@ -1172,7 +1081,7 @@ class MonteCarlo(object):
                 new_label = temp_label;
                 
             model_parameter = self.random_merge(new_label, component_label, model_parameter);
-            #self.model_assertion(model_parameter);
+            # self.model_assertion(model_parameter);
             (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             print "merge operation granted from %s to %s" % (self._m_k, proposed_m_k);
             
@@ -1220,11 +1129,11 @@ class MonteCarlo(object):
                 component_log_likelihood[topic_index] -= self._vocabulary_size * scipy.special.gammaln(self._alpha_eta);
             else:
                 component_log_likelihood[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]);
-                #component_log_likelihood[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
+                # component_log_likelihood[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
                 component_log_likelihood[topic_index] -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] + n_k[component_label]);
                 component_log_likelihood[topic_index] += numpy.sum(scipy.special.gammaln(proposed_n_kv[topic_index, :] + proposed_n_kv[component_label, :] + self._alpha_eta));
                 component_log_likelihood[topic_index] -= numpy.sum(scipy.special.gammaln(proposed_n_kv[topic_index, :] + self._alpha_eta));
-                #component_log_likelihood[topic_index] -= self._vocabulary_size * scipy.special.gammaln(self._alpha_eta);
+                # component_log_likelihood[topic_index] -= self._vocabulary_size * scipy.special.gammaln(self._alpha_eta);
         
         # normalize the posterior distribution
         component_log_posterior = component_log_prior + component_log_likelihood;
@@ -1243,12 +1152,12 @@ class MonteCarlo(object):
         if self._K == 1:
             return;
         
-        #self.model_assertion();
+        # self.model_assertion();
         
         assert numpy.all(self._m_k >= 0);
         
         # sample cluster assignment for all the points in the current cluster
-        #for old_component_label in numpy.random.permutation(xrange(self._K)):
+        # for old_component_label in numpy.random.permutation(xrange(self._K)):
         for old_component_label in numpy.argsort(self._m_k):
             # if this cluster is empty, no need to resample the cluster assignment
             if self._m_k[old_component_label] <= 0:
@@ -1282,7 +1191,7 @@ class MonteCarlo(object):
             
             print "merge cluster %d to %d after component resampling to %s..." % (old_component_label, new_component_label, self._m_k);
             
-            #self.model_assertion();
+            # self.model_assertion();
 
         self.compact_params();
         
@@ -1310,14 +1219,14 @@ class MonteCarlo(object):
         assert self._n_dk.shape == (self._D, self._K);
         '''
 
-        #self.model_assertion();
+        # self.model_assertion();
         
         return;
 
     """
     """
     def compact_params(self, model_parameter=None):
-        #self.model_assertion(model_parameter);
+        # self.model_assertion(model_parameter);
         
         if model_parameter == None:
             K = self._K;
@@ -1371,30 +1280,30 @@ class MonteCarlo(object):
             self._t_dv = t_dv;
             self._k_dt = k_dt;
             
-            #self.model_assertion();
+            # self.model_assertion();
             return
         else:
             model_parameter = (K, n_kv, m_k, n_dk, n_dt, t_dv, k_dt);
 
-            #self.model_assertion(model_parameter);
+            # self.model_assertion(model_parameter);
             return model_parameter
 
-    def log_posterior(self, model_parameter=None):
+    def log_posterior(self, model_parameter=None, hyper_parameter=None):
         log_posterior = 0.;
         
         # compute the document level log likelihood
-        log_posterior += self.table_log_likelihood(model_parameter);
+        log_posterior += self.table_log_likelihood(model_parameter, hyper_parameter);
         # compute the table level log likelihood
-        log_posterior += self.topic_log_likelihood(model_parameter);
+        log_posterior += self.topic_log_likelihood(model_parameter, hyper_parameter);
         # compute the word level log likelihood
-        log_posterior += self.word_log_likelihood(model_parameter);
+        log_posterior += self.word_log_likelihood(model_parameter, hyper_parameter);
         
         return log_posterior;
 
     """
     compute the word level log likelihood p(x | t, k) = \prod_{k=1}^K f(x_{ij} | z_{ij}=k), where f(x_{ij} | z_{ij}=k) = \frac{\Gamma(V \eta)}{\Gamma(n_k + V \eta)} \frac{\prod_{v} \Gamma(n_{k}^{v} + \eta)}{\Gamma^V(\eta)}
     """
-    def word_log_likelihood(self, model_parameter=None):
+    def word_log_likelihood(self, model_parameter=None, hyper_parameter=None):
         if model_parameter == None:
             K = self._K;
             n_kv = self._n_kv;
@@ -1405,24 +1314,33 @@ class MonteCarlo(object):
             k_dt = self._k_dt;
         else:
             (K, n_kv, m_k, n_dk, n_dt, t_dv, k_dt) = model_parameter;
-        
+
+        if hyper_parameter == None:
+            alpha_alpha = self._alpha_alpha;
+            alpha_gamma = self._alpha_gamma;
+            alpha_eta = self._alpha_eta;
+        else:
+            alpha_alpha = hyper_parameter[0];
+            alpha_gamma = hyper_parameter[1];
+            alpha_eta = hyper_parameter[2];
+            
         n_k = numpy.sum(n_kv, axis=1);
         assert(len(n_k) == K);
         
         log_likelihood = 0;
         
-        log_likelihood += K * scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
-        log_likelihood -= numpy.sum(scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k));
+        log_likelihood += K * scipy.special.gammaln(self._vocabulary_size * alpha_eta);
+        log_likelihood -= numpy.sum(scipy.special.gammaln(self._vocabulary_size * alpha_eta + n_k));
         
-        log_likelihood += numpy.sum(scipy.special.gammaln(self._alpha_eta + n_kv));
-        log_likelihood -= K * self._vocabulary_size * scipy.special.gammaln(self._alpha_eta);
+        log_likelihood += numpy.sum(scipy.special.gammaln(alpha_eta + n_kv));
+        log_likelihood -= K * self._vocabulary_size * scipy.special.gammaln(alpha_eta);
         
         return log_likelihood
         
     """
     compute the table level prior in log scale \prod_{d=1}^D (p(t_{d})), where p(t_d) = \frac{ \alpha^m_d \prod_{t=1}^{m_d}(n_di-1)! }{ \prod_{v=1}^{n_d}(v+\alpha-1) }
     """
-    def table_log_likelihood(self, model_parameter=None):
+    def table_log_likelihood(self, model_parameter=None, hyper_parameter=None):
         if model_parameter == None:
             K = self._K;
             n_kv = self._n_kv;
@@ -1434,19 +1352,28 @@ class MonteCarlo(object):
         else:
             (K, n_kv, m_k, n_dk, n_dt, t_dv, k_dt) = model_parameter;
         
+        if hyper_parameter == None:
+            alpha_alpha = self._alpha_alpha;
+            alpha_gamma = self._alpha_gamma;
+            alpha_eta = self._alpha_eta;
+        else:
+            alpha_alpha = hyper_parameter[0];
+            alpha_gamma = hyper_parameter[1];
+            alpha_eta = hyper_parameter[2];
+                        
         log_likelihood = 0.;
         for document_index in xrange(self._D):
-            log_likelihood += len(k_dt[document_index]) * numpy.log(self._alpha_gamma);
+            log_likelihood += len(k_dt[document_index]) * numpy.log(alpha_gamma);
             log_likelihood += numpy.sum(scipy.special.gammaln(n_dt[document_index]));
-            log_likelihood -= scipy.special.gammaln(len(t_dv[document_index]) + self._alpha_gamma)
-            log_likelihood += scipy.special.gammaln(self._alpha_gamma);
+            log_likelihood -= scipy.special.gammaln(len(t_dv[document_index]) + alpha_gamma)
+            log_likelihood += scipy.special.gammaln(alpha_gamma);
             
         return log_likelihood
     
     """
     compute the topic level prior in log scale p(k) = \frac{ \gamma^K \prod_{k=1}^{K}(m_k-1)! }{ \prod_{s=1}^{m}(s+\gamma-1) }
     """
-    def topic_log_likelihood(self, model_parameter=None):
+    def topic_log_likelihood(self, model_parameter=None, hyper_parameter=None):
         if model_parameter == None:
             K = self._K;
             n_kv = self._n_kv;
@@ -1458,11 +1385,20 @@ class MonteCarlo(object):
         else:
             (K, n_kv, m_k, n_dk, n_dt, t_dv, k_dt) = model_parameter;
         
+        if hyper_parameter == None:
+            alpha_alpha = self._alpha_alpha;
+            alpha_gamma = self._alpha_gamma;
+            alpha_eta = self._alpha_eta;
+        else:
+            alpha_alpha = hyper_parameter[0];
+            alpha_gamma = hyper_parameter[1];
+            alpha_eta = hyper_parameter[2];
+                        
         log_likelihood = 0;
-        log_likelihood += K * numpy.log(self._alpha_alpha)
+        log_likelihood += K * numpy.log(alpha_alpha)
         log_likelihood += numpy.sum(scipy.special.gammaln(m_k));
-        log_likelihood -= scipy.special.gammaln(numpy.sum(m_k) + self._alpha_alpha);
-        log_likelihood += scipy.special.gammaln(self._alpha_alpha);
+        log_likelihood -= scipy.special.gammaln(numpy.sum(m_k) + alpha_alpha);
+        log_likelihood += scipy.special.gammaln(alpha_alpha);
         
         return log_likelihood
     

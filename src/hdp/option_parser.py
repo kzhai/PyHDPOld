@@ -11,8 +11,8 @@ def parse_args():
                         
                         # parameter set 2
                         alpha_eta=-1,
-                        alpha_alpha=1,
-                        alpha_gamma=1,
+                        alpha_alpha=0.1,
+                        alpha_gamma=0.1,
                         
                         # parameter set 3
                         training_iterations=1000,
@@ -37,9 +37,9 @@ def parse_args():
     parser.add_option("--alpha_eta", type="float", dest="alpha_eta",
                       help="hyper-parameter for Dirichlet distribution of vocabulary [1.0/number_of_types]")
     parser.add_option("--alpha_alpha", type="float", dest="alpha_alpha",
-                      help="hyper-parameter for top level Dirichlet process of distribution over topics [1]")
+                      help="hyper-parameter for top level Dirichlet process of distribution over topics [0.1]")
     parser.add_option("--alpha_gamma", type="float", dest="alpha_gamma",
-                      help="hyper-parameter for bottom level Dirichlet process of distribution over topics [1]")
+                      help="hyper-parameter for bottom level Dirichlet process of distribution over topics [0.1]")
     
     # parameter set 3
     parser.add_option("--training_iterations", type="int", dest="training_iterations",

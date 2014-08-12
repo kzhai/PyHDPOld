@@ -40,7 +40,7 @@ class MonteCarlo(object):
                  merge_proposal=0,
                  split_merge_iteration=1,
                  restrict_gibbs_sampling_iteration=10,
-                 hyper_parameter_interval=10,
+                 hyper_parameter_interval=1,
                  hash_oov_words=False
                  ):
         self._split_merge_heuristics = split_merge_heuristics;
@@ -205,8 +205,10 @@ class MonteCarlo(object):
         elif self._split_merge_heuristics > 0:
             self.split_merge();
             
-        #if self._iteration_counter % self._hyper_parameter_interval == 0:
-            #self.optimize_hyperparameters();
+        if self._iteration_counter % self._hyper_parameter_interval == 0:
+            #self.optimize_log_hyperparameter();
+            #self.optimize_log_hyperparameters();
+            self.optimize_hyperparameters();
     
         print "accumulated number of tables:", self._m_k;
         print "accumulated number of tokens:", numpy.sum(self._n_kv, axis=1)[:, numpy.newaxis].T;
@@ -248,40 +250,12 @@ class MonteCarlo(object):
                 
                 assert(numpy.all(self._k_dt[document_index] >= 0));
                 
-                '''
-                n_k = numpy.sum(self._n_kv, axis=1);
-                assert(len(n_k) == self._K);
-                f = numpy.zeros(self._K);
-                f_new = self._alpha_alpha / self._vocabulary_size;
-                for k in xrange(self._K):
-                    f[k] = (self._n_kv[k, word_id] + self._alpha_eta) / (n_k[k] + self._vocabulary_size * self._alpha_eta);
-                    f_new += self._m_k[k] * f[k];
-                f_new /= (numpy.sum(self._m_k) + self._alpha_alpha);
-                '''
-                
                 n_k = numpy.sum(self._n_kv, axis=1);
                 assert(len(n_k) == self._K);
                 f = (self._n_kv[:, word_id] + self._alpha_eta) / (n_k + self._vocabulary_size * self._alpha_eta);
                 f_new = self._alpha_alpha / self._vocabulary_size;
                 f_new += numpy.sum(self._m_k * f);
                 f_new /= (numpy.sum(self._m_k) + self._alpha_alpha);
-                
-                '''
-                # compute the probability of this word sitting at every table 
-                table_probability = numpy.zeros(len(self._k_dt[document_index]) + 1);
-                for t in xrange(len(self._k_dt[document_index])):
-                    if self._n_dt[document_index][t] > 0:
-                        # if there are some words sitting on this table, the probability will be proportional to the population
-                        assigned_topic = self._k_dt[document_index][t];
-                        assert(assigned_topic >= 0 or assigned_topic < self._K);
-                        table_probability[t] = f[assigned_topic] * self._n_dt[document_index][t];
-                    else:
-                        # if there are no words sitting on this table
-                        # note that it is an old table, hence the prior probability is 0, not self._alpha_gamma
-                        table_probability[t] = 0.;
-                # compute the probability of current word sitting on a new table, the prior probability is self._alpha_gamma
-                table_probability[len(self._k_dt[document_index])] = self._alpha_gamma * f_new;
-                '''
                 
                 # compute the probability of this word sitting at every table 
                 table_probability = f[self._k_dt[document_index]] * self._n_dt[document_index]
@@ -308,14 +282,6 @@ class MonteCarlo(object):
                     assert(len(self._k_dt) == self._D and numpy.all(self._k_dt[document_index] >= 0));
                     assert(len(self._n_dt[document_index]) == len(self._k_dt[document_index]));
 
-                    '''
-                    # compute the probability of this table having every topic
-                    topic_probability = numpy.zeros(self._K + 1);
-                    for k in xrange(self._K):
-                        topic_probability[k] = self._m_k[k] * f[k];
-                    topic_probability[self._K] = self._alpha_alpha / self._vocabulary_size;
-                    '''
-                    
                     # compute the probability of this table having every topic
                     topic_probability = numpy.zeros(self._K + 1);
                     topic_probability[:self._K] = self._m_k * f;
@@ -454,10 +420,8 @@ class MonteCarlo(object):
         self._n_dk[document_index, new_topic_id] += self._n_dt[document_index][table_index];
         for word_id in selected_word_freq_dist:
             self._n_kv[new_topic_id, word_id] += selected_word_freq_dist[word_id];
-
-    """
-    """
-    def optimize_hyperparameters(self, hyperparameter_samples=10, hyperparameter_step_size=1.0, hyperparameter_maximum_iteration=10):
+  
+    def optimize_log_hyperparameters(self, hyperparameter_samples=10, hyperparameter_step_size=1.0, hyperparameter_maximum_iteration=10):
         old_hyper_parameters = [self._alpha_alpha, self._alpha_gamma, self._alpha_eta];
         old_hyper_parameters = numpy.asarray(old_hyper_parameters);
         old_log_hyper_parameters = numpy.log(old_hyper_parameters);
@@ -474,13 +438,14 @@ class MonteCarlo(object):
                 new_log_hyper_parameters = l + numpy.random.random(len(old_log_hyper_parameters)) * (r - l);
                 lp_test = self.log_posterior(None, numpy.exp(new_log_hyper_parameters));
 
+                #print lp_test, log_likelihood_new;
                 if lp_test > log_likelihood_new:
                     self._alpha_alpha = numpy.exp(new_log_hyper_parameters[0]);
                     self._alpha_gamma = numpy.exp(new_log_hyper_parameters[1])
                     self._alpha_eta = numpy.exp(new_log_hyper_parameters[2]);
                     old_log_hyper_parameters = new_log_hyper_parameters;
                     print "Update hyperparameter to %s" % (numpy.exp(new_log_hyper_parameters));
-                    return;
+                    break;
                 else:
                     for dd in xrange(len(new_log_hyper_parameters)):
                         if new_log_hyper_parameters[dd] < old_log_hyper_parameters[dd]:
@@ -489,6 +454,73 @@ class MonteCarlo(object):
                             r[dd] = new_log_hyper_parameters[dd]
                         assert l[dd] <= old_log_hyper_parameters[dd]
                         assert r[dd] >= old_log_hyper_parameters[dd]
+            
+    def optimize_hyperparameters(self, hyperparameter_samples=10, hyperparameter_maximum_iteration=10):
+        old_hyper_parameters = [self._alpha_alpha, self._alpha_gamma, self._alpha_eta];
+        old_hyper_parameters = numpy.asarray(old_hyper_parameters);
+        #old_hyper_parameters = numpy.log(old_hyper_parameters);
+
+        for ii in xrange(hyperparameter_samples):
+            hyperparameter_step_size = old_hyper_parameters;
+            
+            log_likelihood_old = self.log_posterior()
+            log_likelihood_new = numpy.log(numpy.random.random()) + log_likelihood_old
+            # print("OLD: %f\tNEW: %f at (%f, %f)" % (log_likelihood_old, log_likelihood_new, self._alpha, self._beta))
+
+            l = old_hyper_parameters - numpy.random.random(len(old_hyper_parameters)) * hyperparameter_step_size;
+            r = old_hyper_parameters + hyperparameter_step_size;
+
+            for jj in xrange(hyperparameter_maximum_iteration):
+                new_hyper_parameters = l + numpy.random.random(len(old_hyper_parameters)) * (r - l);
+                lp_test = self.log_posterior(None, new_hyper_parameters);
+
+                #print lp_test, log_likelihood_new;
+                if lp_test > log_likelihood_new:
+                    self._alpha_alpha = new_hyper_parameters[0];
+                    self._alpha_gamma = new_hyper_parameters[1];
+                    self._alpha_eta = new_hyper_parameters[2];
+                    old_hyper_parameters = new_hyper_parameters;
+                    print "Update hyperparameter to %s" % (new_hyper_parameters);
+                    break;
+                else:
+                    for dd in xrange(len(new_hyper_parameters)):
+                        if new_hyper_parameters[dd] < old_hyper_parameters[dd]:
+                            l[dd] = new_hyper_parameters[dd]
+                        else:
+                            r[dd] = new_hyper_parameters[dd]
+                        assert l[dd] <= old_hyper_parameters[dd]
+                        assert r[dd] >= old_hyper_parameters[dd]
+
+    '''
+    def optimize_log_hyperparameter(self, hyperparameter_samples=10, hyperparameter_step_size=1.0, hyperparameter_maximum_iteration=10):
+        old_log_hyper_parameters = numpy.log(self._alpha_alpha);
+
+        for ii in xrange(hyperparameter_samples):
+            log_likelihood_old = self.log_posterior()
+            log_likelihood_new = numpy.log(numpy.random.random()) + log_likelihood_old
+            # print("OLD: %f\tNEW: %f at (%f, %f)" % (log_likelihood_old, log_likelihood_new, self._alpha, self._beta))
+
+            l = old_log_hyper_parameters - numpy.random.random() * hyperparameter_step_size;
+            r = old_log_hyper_parameters + hyperparameter_step_size;
+
+            for jj in xrange(hyperparameter_maximum_iteration):
+                new_log_hyper_parameters = l + numpy.random.random() * (r - l);
+                lp_test = self.log_posterior(None, numpy.exp(new_log_hyper_parameters));
+
+                if lp_test > log_likelihood_new:
+                    self._alpha_alpha = numpy.exp(new_log_hyper_parameters);
+                    old_log_hyper_parameters = new_log_hyper_parameters;
+                    break;
+                else:
+                    if new_log_hyper_parameters < old_log_hyper_parameters:
+                        l = new_log_hyper_parameters
+                    else:
+                        r = new_log_hyper_parameters
+                    assert l <= old_log_hyper_parameters
+                    assert r >= old_log_hyper_parameters
+            
+            print "Update hyperparameter to %s" % (numpy.exp(new_log_hyper_parameters));
+    '''
     
     def split_merge(self):
         for iteration in xrange(self._split_merge_iteration):
@@ -1161,7 +1193,7 @@ class MonteCarlo(object):
                 continue;
             
             new_component_label = self.propose_component_to_merge(old_component_label);
-            #print "propose to merge cluster %d to %d" % (old_component_label, new_component_label);
+            # print "propose to merge cluster %d to %d" % (old_component_label, new_component_label);
             
             if new_component_label == old_component_label:
                 continue;
@@ -1288,19 +1320,28 @@ class MonteCarlo(object):
     def log_posterior(self, model_parameter=None, hyper_parameter=None):
         log_posterior = 0.;
         
+        if hyper_parameter == None:
+            alpha_alpha = self._alpha_alpha;
+            alpha_gamma = self._alpha_gamma;
+            alpha_eta = self._alpha_eta;
+        else:
+            alpha_alpha = hyper_parameter[0];
+            alpha_gamma = hyper_parameter[1];
+            alpha_eta = hyper_parameter[2];
+
         # compute the document level log likelihood
-        log_posterior += self.table_log_likelihood(model_parameter, hyper_parameter);
+        log_posterior += self.table_log_likelihood(model_parameter, alpha_gamma);
         # compute the table level log likelihood
-        log_posterior += self.topic_log_likelihood(model_parameter, hyper_parameter);
+        log_posterior += self.topic_log_likelihood(model_parameter, alpha_alpha);
         # compute the word level log likelihood
-        log_posterior += self.word_log_likelihood(model_parameter, hyper_parameter);
+        log_posterior += self.word_log_likelihood(model_parameter, alpha_eta);
         
         return log_posterior;
 
     """
     compute the word level log likelihood p(x | t, k) = \prod_{k=1}^K f(x_{ij} | z_{ij}=k), where f(x_{ij} | z_{ij}=k) = \frac{\Gamma(V \eta)}{\Gamma(n_k + V \eta)} \frac{\prod_{v} \Gamma(n_{k}^{v} + \eta)}{\Gamma^V(\eta)}
     """
-    def word_log_likelihood(self, model_parameter=None, hyper_parameter=None):
+    def word_log_likelihood(self, model_parameter=None, alpha_eta=None):
         if model_parameter == None:
             K = self._K;
             n_kv = self._n_kv;
@@ -1312,14 +1353,8 @@ class MonteCarlo(object):
         else:
             (K, n_kv, m_k, n_dk, n_dt, t_dv, k_dt) = model_parameter;
 
-        if hyper_parameter == None:
-            alpha_alpha = self._alpha_alpha;
-            alpha_gamma = self._alpha_gamma;
+        if alpha_eta == None:
             alpha_eta = self._alpha_eta;
-        else:
-            alpha_alpha = hyper_parameter[0];
-            alpha_gamma = hyper_parameter[1];
-            alpha_eta = hyper_parameter[2];
             
         n_k = numpy.sum(n_kv, axis=1);
         assert(len(n_k) == K);
@@ -1337,7 +1372,7 @@ class MonteCarlo(object):
     """
     compute the table level prior in log scale \prod_{d=1}^D (p(t_{d})), where p(t_d) = \frac{ \alpha^m_d \prod_{t=1}^{m_d}(n_di-1)! }{ \prod_{v=1}^{n_d}(v+\alpha-1) }
     """
-    def table_log_likelihood(self, model_parameter=None, hyper_parameter=None):
+    def table_log_likelihood(self, model_parameter=None, alpha_gamma=None):
         if model_parameter == None:
             K = self._K;
             n_kv = self._n_kv;
@@ -1348,16 +1383,10 @@ class MonteCarlo(object):
             k_dt = self._k_dt;
         else:
             (K, n_kv, m_k, n_dk, n_dt, t_dv, k_dt) = model_parameter;
-        
-        if hyper_parameter == None:
-            alpha_alpha = self._alpha_alpha;
-            alpha_gamma = self._alpha_gamma;
-            alpha_eta = self._alpha_eta;
-        else:
-            alpha_alpha = hyper_parameter[0];
-            alpha_gamma = hyper_parameter[1];
-            alpha_eta = hyper_parameter[2];
                         
+        if alpha_gamma == None:
+            alpha_gamma = self._alpha_gamma;
+            
         log_likelihood = 0.;
         for document_index in xrange(self._D):
             log_likelihood += len(k_dt[document_index]) * numpy.log(alpha_gamma);
@@ -1370,7 +1399,7 @@ class MonteCarlo(object):
     """
     compute the topic level prior in log scale p(k) = \frac{ \gamma^K \prod_{k=1}^{K}(m_k-1)! }{ \prod_{s=1}^{m}(s+\gamma-1) }
     """
-    def topic_log_likelihood(self, model_parameter=None, hyper_parameter=None):
+    def topic_log_likelihood(self, model_parameter=None, alpha_alpha=None):
         if model_parameter == None:
             K = self._K;
             n_kv = self._n_kv;
@@ -1382,14 +1411,8 @@ class MonteCarlo(object):
         else:
             (K, n_kv, m_k, n_dk, n_dt, t_dv, k_dt) = model_parameter;
         
-        if hyper_parameter == None:
+        if alpha_alpha == None:
             alpha_alpha = self._alpha_alpha;
-            alpha_gamma = self._alpha_gamma;
-            alpha_eta = self._alpha_eta;
-        else:
-            alpha_alpha = hyper_parameter[0];
-            alpha_gamma = hyper_parameter[1];
-            alpha_eta = hyper_parameter[2];
                         
         log_likelihood = 0;
         log_likelihood += K * numpy.log(alpha_alpha)

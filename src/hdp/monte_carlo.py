@@ -457,7 +457,7 @@ class MonteCarlo(object):
 
     """
     """
-    def optimize_hyperparameters(self, hyperparameter_samples=2, hyperparameter_step_size=1.0, hyperparameter_maximum_iteration=10):
+    def optimize_hyperparameters(self, hyperparameter_samples=10, hyperparameter_step_size=1.0, hyperparameter_maximum_iteration=10):
         old_hyper_parameters = [self._alpha_alpha, self._alpha_gamma, self._alpha_eta];
         old_hyper_parameters = numpy.asarray(old_hyper_parameters);
         old_log_hyper_parameters = numpy.log(old_hyper_parameters);

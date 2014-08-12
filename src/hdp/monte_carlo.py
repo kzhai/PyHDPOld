@@ -40,7 +40,7 @@ class MonteCarlo(object):
                  merge_proposal=0,
                  split_merge_iteration=1,
                  restrict_gibbs_sampling_iteration=10,
-                 hyper_parameter_interval=1,
+                 hyper_parameter_interval=10,
                  hash_oov_words=False
                  ):
         self._split_merge_heuristics = split_merge_heuristics;
@@ -429,7 +429,6 @@ class MonteCarlo(object):
         for ii in xrange(hyperparameter_samples):
             log_likelihood_old = self.log_posterior()
             log_likelihood_new = numpy.log(numpy.random.random()) + log_likelihood_old
-            # print("OLD: %f\tNEW: %f at (%f, %f)" % (log_likelihood_old, log_likelihood_new, self._alpha, self._beta))
 
             l = old_log_hyper_parameters - numpy.random.random(len(old_log_hyper_parameters)) * hyperparameter_step_size;
             r = old_log_hyper_parameters + hyperparameter_step_size;
@@ -438,13 +437,12 @@ class MonteCarlo(object):
                 new_log_hyper_parameters = l + numpy.random.random(len(old_log_hyper_parameters)) * (r - l);
                 lp_test = self.log_posterior(None, numpy.exp(new_log_hyper_parameters));
 
-                #print lp_test, log_likelihood_new;
                 if lp_test > log_likelihood_new:
                     self._alpha_alpha = numpy.exp(new_log_hyper_parameters[0]);
                     self._alpha_gamma = numpy.exp(new_log_hyper_parameters[1])
                     self._alpha_eta = numpy.exp(new_log_hyper_parameters[2]);
                     old_log_hyper_parameters = new_log_hyper_parameters;
-                    print "Update hyperparameter to %s" % (numpy.exp(new_log_hyper_parameters));
+                    print "update hyperparameter to %s" % (numpy.exp(new_log_hyper_parameters));
                     break;
                 else:
                     for dd in xrange(len(new_log_hyper_parameters)):
@@ -454,33 +452,32 @@ class MonteCarlo(object):
                             r[dd] = new_log_hyper_parameters[dd]
                         assert l[dd] <= old_log_hyper_parameters[dd]
                         assert r[dd] >= old_log_hyper_parameters[dd]
-            
-    def optimize_hyperparameters(self, hyperparameter_samples=10, hyperparameter_maximum_iteration=10):
+                        
+    def optimize_hyperparameters(self, hyperparameter_samples=10, hyperparameter_step_size=1.0, hyperparameter_maximum_iteration=10):
         old_hyper_parameters = [self._alpha_alpha, self._alpha_gamma, self._alpha_eta];
         old_hyper_parameters = numpy.asarray(old_hyper_parameters);
         #old_hyper_parameters = numpy.log(old_hyper_parameters);
 
         for ii in xrange(hyperparameter_samples):
-            hyperparameter_step_size = old_hyper_parameters;
+            step_size = old_hyper_parameters;
+            step_size[numpy.nonzero(step_size>hyperparameter_step_size)[0]] = hyperparameter_step_size;
             
             log_likelihood_old = self.log_posterior()
             log_likelihood_new = numpy.log(numpy.random.random()) + log_likelihood_old
-            # print("OLD: %f\tNEW: %f at (%f, %f)" % (log_likelihood_old, log_likelihood_new, self._alpha, self._beta))
 
-            l = old_hyper_parameters - numpy.random.random(len(old_hyper_parameters)) * hyperparameter_step_size;
-            r = old_hyper_parameters + hyperparameter_step_size;
+            l = old_hyper_parameters - numpy.random.random(len(old_hyper_parameters)) * step_size;
+            r = old_hyper_parameters + step_size;
 
             for jj in xrange(hyperparameter_maximum_iteration):
                 new_hyper_parameters = l + numpy.random.random(len(old_hyper_parameters)) * (r - l);
                 lp_test = self.log_posterior(None, new_hyper_parameters);
 
-                #print lp_test, log_likelihood_new;
                 if lp_test > log_likelihood_new:
                     self._alpha_alpha = new_hyper_parameters[0];
                     self._alpha_gamma = new_hyper_parameters[1];
                     self._alpha_eta = new_hyper_parameters[2];
                     old_hyper_parameters = new_hyper_parameters;
-                    print "Update hyperparameter to %s" % (new_hyper_parameters);
+                    print "update hyperparameter to %s" % (new_hyper_parameters);
                     break;
                 else:
                     for dd in xrange(len(new_hyper_parameters)):
@@ -491,37 +488,6 @@ class MonteCarlo(object):
                         assert l[dd] <= old_hyper_parameters[dd]
                         assert r[dd] >= old_hyper_parameters[dd]
 
-    '''
-    def optimize_log_hyperparameter(self, hyperparameter_samples=10, hyperparameter_step_size=1.0, hyperparameter_maximum_iteration=10):
-        old_log_hyper_parameters = numpy.log(self._alpha_alpha);
-
-        for ii in xrange(hyperparameter_samples):
-            log_likelihood_old = self.log_posterior()
-            log_likelihood_new = numpy.log(numpy.random.random()) + log_likelihood_old
-            # print("OLD: %f\tNEW: %f at (%f, %f)" % (log_likelihood_old, log_likelihood_new, self._alpha, self._beta))
-
-            l = old_log_hyper_parameters - numpy.random.random() * hyperparameter_step_size;
-            r = old_log_hyper_parameters + hyperparameter_step_size;
-
-            for jj in xrange(hyperparameter_maximum_iteration):
-                new_log_hyper_parameters = l + numpy.random.random() * (r - l);
-                lp_test = self.log_posterior(None, numpy.exp(new_log_hyper_parameters));
-
-                if lp_test > log_likelihood_new:
-                    self._alpha_alpha = numpy.exp(new_log_hyper_parameters);
-                    old_log_hyper_parameters = new_log_hyper_parameters;
-                    break;
-                else:
-                    if new_log_hyper_parameters < old_log_hyper_parameters:
-                        l = new_log_hyper_parameters
-                    else:
-                        r = new_log_hyper_parameters
-                    assert l <= old_log_hyper_parameters
-                    assert r >= old_log_hyper_parameters
-            
-            print "Update hyperparameter to %s" % (numpy.exp(new_log_hyper_parameters));
-    '''
-    
     def split_merge(self):
         for iteration in xrange(self._split_merge_iteration):
             topic_probability = 1.0 * self._m_k / numpy.sum(self._m_k);

@@ -479,7 +479,8 @@ class MonteCarlo(object):
                     self._alpha_gamma = numpy.exp(new_log_hyper_parameters[1])
                     self._alpha_eta = numpy.exp(new_log_hyper_parameters[2]);
                     old_log_hyper_parameters = new_log_hyper_parameters;
-                    break
+                    print "Update hyperparameter to %s" % (numpy.exp(new_log_hyper_parameters));
+                    return;
                 else:
                     for dd in xrange(len(new_log_hyper_parameters)):
                         if new_log_hyper_parameters[dd] < old_log_hyper_parameters[dd]:
@@ -488,8 +489,6 @@ class MonteCarlo(object):
                             r[dd] = new_log_hyper_parameters[dd]
                         assert l[dd] <= old_log_hyper_parameters[dd]
                         assert r[dd] >= old_log_hyper_parameters[dd]
-                        
-            print "Update hyperparameter to %s" % (numpy.exp(new_log_hyper_parameters));
     
     def split_merge(self):
         for iteration in xrange(self._split_merge_iteration):
@@ -1139,8 +1138,6 @@ class MonteCarlo(object):
         component_log_posterior = component_log_prior + component_log_likelihood;
         component_log_posterior -= scipy.misc.logsumexp(component_log_posterior);
         component_posterior = numpy.exp(component_log_posterior);
-        
-        #print component_posterior;
         
         cdf = numpy.cumsum(component_posterior);
         new_label = numpy.uint32(numpy.nonzero(cdf >= numpy.random.random())[0][0]);

@@ -17,12 +17,16 @@ def filter():
     min_doc_frequency_cutoff = int(sys.argv[4]);
     max_doc_frequency_cutoff = int(sys.argv[5]);
 
-    min_doc_length = 10;
+    min_doc_length = int(sys.argv[6])
+    
+    min_tf_idf = 1.5;
     
     output_directory = input_directory;
     output_directory += "-min_tf%d-max_tf%d" % (min_term_frequency_cutoff, max_term_frequency_cutoff);
     output_directory += "-min_df%d-max_df%d" % (min_doc_frequency_cutoff, max_doc_frequency_cutoff);
-    os.mkdir(output_directory);
+    output_directory += "-min_dl%d" % (min_doc_length);
+    if not os.path.exists(output_directory):
+        os.mkdir(output_directory);
     
     term_freq = nltk.probability.FreqDist();
     doc_freq = nltk.probability.FreqDist();
@@ -42,7 +46,8 @@ def filter():
                     if term_freq[word]>=min_term_frequency_cutoff \
                     and term_freq[word]<=max_term_frequency_cutoff \
                     and doc_freq[word]>=min_doc_frequency_cutoff \
-                    and doc_freq[word]<=max_doc_frequency_cutoff];
+                    and doc_freq[word]<=max_doc_frequency_cutoff \
+                    and term_freq[word]*1.0/doc_freq[word]>min_tf_idf];
     output_voc_stream = open(os.path.join(output_directory, "voc.dat"), "w");
     for word in valid_vocab:
         output_voc_stream.write("%s\t%d\t%d\n" % (word, term_freq[word], doc_freq[word]));

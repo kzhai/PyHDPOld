@@ -37,8 +37,8 @@ def stemmer():
         line = line.strip();
         line = line.lower();
         
-        #words = [self._stemmer.stem(x) for x in self._tokenizer.tokenize(line) if (x not in self._stop) and (min(y in ascii_lowercase for y in x))];
-        words = [porter_stemmer.stem(x) for x in punkt_tokenizer.tokenize(line) if (x not in stop_words)];
+        #words = [porter_stemmer.stem(x) for x in punkt_tokenizer.tokenize(line) if (x not in stop_words)];
+        words = [porter_stemmer.stem(x) for x in punkt_tokenizer.tokenize(line) if (x not in stop_words) and (x!="nbsp")];
         
         if len(words)>=min_doc_length:
             output_doc_stream.write(" ".join(words) + "\n");

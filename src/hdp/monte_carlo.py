@@ -457,7 +457,7 @@ class MonteCarlo(object):
 
     """
     """
-    def optimize_hyperparameters(self, hyperparameter_samples=10, hyperparameter_step_size=1.0, hyperparameter_maximum_iteration=10):
+    def optimize_hyperparameters(self, hyperparameter_samples=2, hyperparameter_step_size=1.0, hyperparameter_maximum_iteration=10):
         old_hyper_parameters = [self._alpha_alpha, self._alpha_gamma, self._alpha_eta];
         old_hyper_parameters = numpy.asarray(old_hyper_parameters);
         old_log_hyper_parameters = numpy.log(old_hyper_parameters);
@@ -1140,7 +1140,7 @@ class MonteCarlo(object):
         component_log_posterior -= scipy.misc.logsumexp(component_log_posterior);
         component_posterior = numpy.exp(component_log_posterior);
         
-        print component_posterior;
+        #print component_posterior;
         
         cdf = numpy.cumsum(component_posterior);
         new_label = numpy.uint32(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
@@ -1164,7 +1164,7 @@ class MonteCarlo(object):
                 continue;
             
             new_component_label = self.propose_component_to_merge(old_component_label);
-            print "propose to merge cluster %d to %d" % (old_component_label, new_component_label);
+            #print "propose to merge cluster %d to %d" % (old_component_label, new_component_label);
             
             if new_component_label == old_component_label:
                 continue;

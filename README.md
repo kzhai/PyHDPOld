@@ -7,4 +7,4 @@ Generate data
 
 Profile sampler
 
-	python -m cProfile hdp/profile_launch.py
+	python -m cProfile hdp/launch_profiler.py

@@ -205,8 +205,8 @@ class MonteCarlo(object):
         elif self._split_merge_heuristics > 0:
             self.split_merge();
             
-        if self._iteration_counter % self._hyper_parameter_interval == 0:
-            self.optimize_hyperparameters();
+        #if self._iteration_counter % self._hyper_parameter_interval == 0:
+            #self.optimize_hyperparameters();
     
         print "accumulated number of tables:", self._m_k;
         print "accumulated number of tokens:", numpy.sum(self._n_kv, axis=1)[:, numpy.newaxis].T;

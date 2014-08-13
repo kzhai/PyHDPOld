@@ -9,11 +9,11 @@ library(ggplot2)
 library(grid)
 library(scales)
 
-#file_name="140730-224558-log-likelihood"
-file_name="140806-165121-log-likelihood"
+#file_name="140806-165121-log-likelihood"
+file_name="140730-224558-log-likelihood"
 
-project_home="/windows/d/Workspace/PyHDP/"
-#project_home="/Users/kezhai/Workspace/PyHDP/"
+#project="/windows/d/Workspace/OnlineLDA/"
+project_home="/Users/kezhai/Workspace/PyHDP/"
 
 input_directory=paste(project_home, "result/", sep="");
 output_directory=paste(project_home, "figure/", sep="");
@@ -25,6 +25,7 @@ pdf(width=6, height=2.8)
 
 # load in csv data
 input_data <- read.csv(input_file)
+#input_data <- subset(input_data, input_data$iteration<=500)
 
 plot_pic <- ggplot() +
 	geom_line(data=input_data, aes(x=iteration, y=likelihood, color=inference, group=inference), alpha=0.75, size=1) +
@@ -39,7 +40,7 @@ plot_pic <- ggplot() +
 	theme(legend.position="bottom") +
 	theme(legend.title = element_text(size = 0, angle = 90), legend.text = element_text(size = 13)) +
 	
-	coord_cartesian(ylim=c(-45000,-41500)) +
+	#coord_cartesian(ylim=c(-45000,-41500)) +
 	#scale_y_continuous(breaks = round(seq(-6000, -4000, by=1000), 1)) +
 	#scale_x_continuous(breaks = round(seq(1, 500, by=100), 1)) + 
 	

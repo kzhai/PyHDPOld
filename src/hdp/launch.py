@@ -1,4 +1,5 @@
-import cPickle, string, numpy, getopt, sys, random, time, re, pprint
+import cPickle;
+import string, numpy, getopt, sys, random, time, re, pprint
 import datetime, os;
 
 import nltk;
@@ -146,9 +147,8 @@ def main():
         # Save lambda, the parameters to the variational distributions over topics, and batch_gamma, the parameters to the variational distributions over topic weights for the articles analyzed in the last iteration.
         if (hdp._iteration_counter % snapshot_interval == 0):
             hdp.export_beta(os.path.join(output_directory, 'exp_beta-' + str(hdp._iteration_counter)), 50);
-            numpy.savetxt(os.path.join(output_directory, 'n_kv-' + str(hdp._iteration_counter)), hdp._n_kv, fmt="%d");
-            # numpy.savetxt(os.path.join(output_directory, 'beta-' + str(hdp._iteration_counter)), hdp._E_log_beta);
-            # numpy.savetxt(os.path.join(output_directory, 'lambda-' + str(hdp._iteration_counter)), hdp._lambda);
+            #numpy.savetxt(os.path.join(output_directory, 'n_kv-' + str(hdp._iteration_counter)), hdp._n_kv, fmt="%d");
+            
     
     # gamma_path = os.path.join(output_directory, 'gamma.txt');
     # numpy.savetxt(gamma_path, hdp._document_topic_distribution);

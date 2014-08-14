@@ -55,10 +55,10 @@ def main():
         training_iterations = options.training_iterations;
     if options.snapshot_interval > 0:
         snapshot_interval = options.snapshot_interval;
-        
+    
     # resample_topics = options.resample_topics;
     # hash_oov_words = options.hash_oov_words;
-            
+    
     # parameter set 4
     split_merge_heuristics = options.split_merge_heuristics;
     split_proposal = options.split_proposal;

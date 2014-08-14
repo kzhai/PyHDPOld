@@ -1,7 +1,5 @@
 import optparse;
 
-delimiter = '-';
-
 def parse_args():
     parser = optparse.OptionParser()
     parser.set_defaults(# parameter set 1

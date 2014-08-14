@@ -136,7 +136,7 @@ def main():
     hdp._initialize(train_docs, vocab, alpha_alpha, alpha_gamma, alpha_eta)
     
     hdp.export_beta(os.path.join(output_directory, 'exp_beta-' + str(hdp._iteration_counter)), 50);
-    numpy.savetxt(os.path.join(output_directory, 'n_kv-' + str(hdp._iteration_counter)), hdp._n_kv, fmt="%d");
+    #numpy.savetxt(os.path.join(output_directory, 'n_kv-' + str(hdp._iteration_counter)), hdp._n_kv, fmt="%d");
     
     for iteration in xrange(training_iterations):
         clock = time.time();
@@ -148,7 +148,8 @@ def main():
         if (hdp._iteration_counter % snapshot_interval == 0):
             hdp.export_beta(os.path.join(output_directory, 'exp_beta-' + str(hdp._iteration_counter)), 50);
             #numpy.savetxt(os.path.join(output_directory, 'n_kv-' + str(hdp._iteration_counter)), hdp._n_kv, fmt="%d");
-            
+            model_snapshot_path = os.path.join(output_directory, 'model-' + str(hdp._iteration_counter));
+            cPickle.dump(hdp, open(model_snapshot_path, 'wb'));
     
     # gamma_path = os.path.join(output_directory, 'gamma.txt');
     # numpy.savetxt(gamma_path, hdp._document_topic_distribution);

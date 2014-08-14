@@ -10,9 +10,9 @@ import sys
 import matplotlib
 import matplotlib.pyplot
 
-split_merge_proposal_pattern = re.compile('\d+-\d+-hdp-I(?P<iteration>\d+)-S(?P<snapshot>\d+)-aa(?P<alpha>[\d.]+)-ag(?P<gamma>[\d.]+)-ae(?P<eta>[\d.]+)-smh(?P<smh>[\d]+)-sp(?P<sp>[\d]+)-mp(?P<mp>[\d]+)');
-split_merge_heuristics_pattern = re.compile('\d+-\d+-hdp-I(?P<iteration>\d+)-S(?P<snapshot>\d+)-aa(?P<alpha>[\d.]+)-ag(?P<gamma>[\d.]+)-ae(?P<eta>[\d.]+)-smh(?P<smh>[\d]+)');
-no_split_merge_pattern = re.compile('\d+-\d+-hdp-I(?P<iteration>\d+)-S(?P<snapshot>\d+)-aa(?P<alpha>[\d.]+)-ag(?P<gamma>[\d.]+)-ae(?P<eta>[\d.]+)');
+split_merge_proposal_pattern = re.compile('\d+-\d+-hdp-I(?P<iteration>\d+)-S(?P<snapshot>\d+)-aa(?P<alpha>[\d\.]+)-ag(?P<gamma>[\d\.]+)-ae(?P<eta>[\d\.]+)-smh(?P<smh>[\d]+)-sp(?P<sp>[\d]+)-mp(?P<mp>[\d]+)');
+split_merge_heuristics_pattern = re.compile('\d+-\d+-hdp-I(?P<iteration>\d+)-S(?P<snapshot>\d+)-aa(?P<alpha>[\d\.]+)-ag(?P<gamma>[\d\.]+)-ae(?P<eta>[\d\.]+)-smh(?P<smh>[\d]+)');
+no_split_merge_pattern = re.compile('\d+-\d+-hdp-I(?P<iteration>\d+)-S(?P<snapshot>\d+)-aa(?P<alpha>[\d\.]+)-ag(?P<gamma>[\d\.]+)-ae(?P<eta>[\d\.]+)');
 
 def parse_args():
     parser = optparse.OptionParser()

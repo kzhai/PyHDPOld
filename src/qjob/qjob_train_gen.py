@@ -21,7 +21,7 @@ def generate_train_script():
                     parameterStrings="%s-%d" % (cn, count)
     
                     input_stream = open(os.path.join(project_directory, 'src', 'qjob', 'qjob_train.sh'), 'r');
-                    output_stream = open(os.path.join(project_directory, 'qjob', cn+"-"+str(count)+".sh"), 'w');
+                    output_stream = open(os.path.join(project_directory, 'qjob', cn+"-train-"+str(count)+".sh"), 'w');
     
                     for line in input_stream:
                         line = line.rstrip();

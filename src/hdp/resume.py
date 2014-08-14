@@ -6,7 +6,7 @@ import datetime, os;
 import nltk;
 import numpy;
 
-model_settings_pattern = re.compile('\d+-\d+-hdp-I(?P<iteration>\d+)-S(?P<snapshot>\d+)-aa(?P<alpha>[\d.]+)-ag(?P<gamma>[\d.]+)-ae(?P<eta>[\d.]+)(-smh(?P<smh>[\d]+))?(-sp(?P<sp>[\d]+)-mp(?P<mp>[\d]+))?');
+model_settings_pattern = re.compile('\d+-\d+-hdp-I(?P<iteration>\d+)-S(?P<snapshot>\d+)-aa(?P<alpha>[\d\.]+)-ag(?P<gamma>[\d\.]+)-ae(?P<eta>[\d\.]+)(-smh(?P<smh>[\d]+))?(-sp(?P<sp>[\d]+)-mp(?P<mp>[\d]+))?');
 
 def parse_args():
     parser = optparse.OptionParser()

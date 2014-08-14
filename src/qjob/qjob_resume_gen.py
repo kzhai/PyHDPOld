@@ -7,7 +7,7 @@ import re
 #cn='nips-150-15K-50-1500-500'
 cn='pnas-100-10K-50-1K-20'
 
-model_settings_pattern = re.compile('\d+-\d+-hdp-I(?P<iteration>\d+)-S(?P<snapshot>\d+)-aa(?P<alpha>[\d\.]+)-ag(?P<gamma>[\d\.]+)-ae(?P<eta>[\d\.]+)(-(?P<postfix>.+))?');
+model_settings_pattern = re.compile('\d+-\d+-hdp-I(?P<iteration>\d+)-S(?P<snapshot>\d+)-aa(?P<alpha>[\d\.]+)-ag(?P<gamma>[\d\.]+)-ae(?P<eta>[\d\.]+)((?P<postfix>.+))?');
 
 def generate_train_script():
     output_directory = "/fs/clip-scratch/zhaike/PyHDP/output";
@@ -51,7 +51,7 @@ def generate_train_script():
                 output_stream.write("AlphaGamma=" + str(alpha_gamma) + "\n");
                 output_stream.write("AlphaEta=" + str(alpha_eta) + "\n");
                 
-                output_stream.write("Postfix=" + model_postfix + "\n");
+                output_stream.write("PostFix=" + model_postfix + "\n");
 
                 continue;
                                 

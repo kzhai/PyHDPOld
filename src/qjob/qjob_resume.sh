@@ -34,4 +34,4 @@ $PYTHON_COMMAND -O -um hdp.resume \
     --input_directory=$SCRATCH_DIRECTORY/output/$CorpusName/$ModelSetting \
     --snapshot_index=$SnapshotIndex \
     --training_iteration=$TrainingIteration \
-    > $SCRATCH_DIRECTORY/output/$CorpusName/T$TrainingIteration\-aa$AlphaAlpha\-ag$AlphaGamma-$PostFix\.out
+    >> $SCRATCH_DIRECTORY/output/$CorpusName/T$TrainingIteration\-aa$AlphaAlpha\-ag$AlphaGamma-$PostFix\.out

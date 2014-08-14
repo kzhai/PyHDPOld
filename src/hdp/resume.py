@@ -51,15 +51,15 @@ def main():
         output_directory = os.path.join(os.path.dirname(input_directory), model_settings);
         assert (not os.path.exists(output_directory));
         os.rename(input_directory, output_directory);
-        print output_directory
         training_iterations = options.training_iterations;
+
+        print 'successfully rename directory from %s to %s...' % (input_directory, output_directory);
     else:
         output_directory = input_directory;
         
-    print os.path.join(output_directory, "model-%d" % snapshot_index)
-    
     import monte_carlo;
     hdp = cPickle.load(open(os.path.join(output_directory, "model-%d" % snapshot_index), "rb" ));
+    print 'successfully load model snpashot %s...' % (os.path.join(output_directory, "model-%d" % snapshot_index));
 
     for iteration in xrange(hdp._iteration_counter, training_iterations):
         clock = time.time();

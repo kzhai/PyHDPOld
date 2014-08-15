@@ -207,8 +207,8 @@ class MonteCarlo(object):
             
         if self._iteration_counter % self._hyper_parameter_interval == 0:
             #self.optimize_log_hyperparameter();
-            #self.optimize_log_hyperparameters();
-            self.optimize_hyperparameters();
+            self.optimize_log_hyperparameters();
+            #self.optimize_hyperparameters();
     
         print "accumulated number of tables:", self._m_k;
         print "accumulated number of tokens:", numpy.sum(self._n_kv, axis=1)[:, numpy.newaxis].T;

@@ -15,8 +15,7 @@ def main():
     output_file_path = sys.argv[3];
     
     top_words = int(sys.argv[4]);
-    
-    snapshot_index = 500;
+    snapshot_index = int(sys.argv[5]);
 
     clock = time.time();
     if False:

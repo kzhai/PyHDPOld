@@ -2,8 +2,8 @@ import os
 import sys
 import re
 
-#cn='ap-50-2K-10-700-100'
-cn='denews-50-4K-10-3200-30'
+cn='ap-50-2K-10-700-100'
+#cn='denews-50-4K-10-3200-30'
 #cn='nips-150-15K-50-1500-500'
 #cn='pnas-100-10K-50-1K-20'
 

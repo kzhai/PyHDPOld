@@ -40,7 +40,8 @@ class MonteCarlo(object):
                  merge_proposal=0,
                  split_merge_iteration=1,
                  restrict_gibbs_sampling_iteration=10,
-                 hyper_parameter_interval=10,
+                 component_resampling_interval=1,
+                 hyper_parameter_optimizing_interval=10,
                  hash_oov_words=False
                  ):
         self._split_merge_heuristics = split_merge_heuristics;
@@ -50,7 +51,8 @@ class MonteCarlo(object):
         self._split_merge_iteration = split_merge_iteration;
         self._restrict_gibbs_sampling_iteration = restrict_gibbs_sampling_iteration;
 
-        self._hyper_parameter_interval = hyper_parameter_interval;
+        self._component_resampling_interval = component_resampling_interval;
+        self._hyper_optimizing_interval = hyper_parameter_optimizing_interval;
 
         self._hash_oov_words = hash_oov_words;
         
@@ -200,12 +202,12 @@ class MonteCarlo(object):
         self.sample_cgs();
         
         if self._split_merge_heuristics == 0:
-            if self._iteration_counter % 10 == 0:
+            if self._iteration_counter % self._component_resampling_interval == 0:
                 self.resample_components();
         elif self._split_merge_heuristics > 0:
             self.split_merge();
             
-        if self._iteration_counter % self._hyper_parameter_interval == 0:
+        if self._iteration_counter % self._hyper_optimizing_interval == 0:
             #self.optimize_log_hyperparameter();
             self.optimize_log_hyperparameters();
             #self.optimize_hyperparameters();
@@ -1510,36 +1512,6 @@ class MonteCarlo(object):
         
         assert numpy.all(test_m_k == m_k), (test_m_k, m_k);
         assert numpy.all(test_n_kv == n_kv);
-
-"""
-"""
-def print_topics(n_kv, term_mapping, top_words=10):
-    input = open(term_mapping);
-    vocab = {};
-    i = 0;
-    for line in input:
-        vocab[i] = line.strip();
-        i += 1;
-
-    (K, V) = n_kv.shape;
-    assert(V == len(vocab));
-
-    if top_words >= V:
-        sorted_counts = numpy.zeros((1, K)) - numpy.log(V);
-    else:
-        sorted_counts = numpy.sort(n_kv, axis=1);
-        sorted_counts = sorted_counts[:, -top_words][:, numpy.newaxis];
-    
-    assert(sorted_counts.shape == (K, 1));
-
-    for k in xrange(K):
-        display = (n_kv[[k], :] >= sorted_counts[k, :]);
-        assert(display.shape == (1, V));
-        output_str = str(k) + ": ";
-        for v in xrange(self._vocabulary_size):
-            if display[:, v]:
-                output_str += vocab[v] + "\t";
-        print output_str
 
 """
 run HDP on a synthetic corpus.

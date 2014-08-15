@@ -41,7 +41,7 @@ class MonteCarlo(object):
                  split_merge_iteration=1,
                  restrict_gibbs_sampling_iteration=10,
                  component_resampling_interval=1,
-                 hyper_parameter_optimizing_interval=10,
+                 hyper_optimizing_interval=100,
                  hash_oov_words=False
                  ):
         self._split_merge_heuristics = split_merge_heuristics;
@@ -52,7 +52,7 @@ class MonteCarlo(object):
         self._restrict_gibbs_sampling_iteration = restrict_gibbs_sampling_iteration;
 
         self._component_resampling_interval = component_resampling_interval;
-        self._hyper_optimizing_interval = hyper_parameter_optimizing_interval;
+        self._hyper_optimizing_interval = hyper_optimizing_interval;
 
         self._hash_oov_words = hash_oov_words;
         
@@ -208,9 +208,8 @@ class MonteCarlo(object):
             self.split_merge();
             
         if self._iteration_counter % self._hyper_optimizing_interval == 0:
-            #self.optimize_log_hyperparameter();
-            self.optimize_log_hyperparameters();
-            #self.optimize_hyperparameters();
+            #self.optimize_log_hyperparameters();
+            self.optimize_hyperparameters();
     
         print "accumulated number of tables:", self._m_k;
         print "accumulated number of tokens:", numpy.sum(self._n_kv, axis=1)[:, numpy.newaxis].T;

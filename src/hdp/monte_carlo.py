@@ -40,7 +40,7 @@ class MonteCarlo(object):
                  merge_proposal=0,
                  split_merge_iteration=1,
                  restrict_gibbs_sampling_iteration=10,
-                 hyper_parameter_interval=1,
+                 hyper_parameter_interval=10,
                  hash_oov_words=False
                  ):
         self._split_merge_heuristics = split_merge_heuristics;

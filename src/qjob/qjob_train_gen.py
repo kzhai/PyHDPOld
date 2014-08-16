@@ -10,7 +10,7 @@ def generate_train_script():
     project_directory = os.path.abspath(sys.argv[1]);
     count = int(sys.argv[2]);
 
-    for train_iter in [400]:
+    for train_iter in [500]:
         for alpha_alpha in [0.001]:
             for alpha_gamma in [0.001]:
                 

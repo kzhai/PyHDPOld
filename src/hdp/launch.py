@@ -70,9 +70,9 @@ def main():
     suffix += "-%s" % ("hdp");
     suffix += "-I%d" % (training_iterations);
     suffix += "-S%d" % (snapshot_interval);
-    suffix += "-aa%g" % (alpha_alpha);
-    suffix += "-ag%g" % (alpha_gamma);
-    suffix += "-ae%g" % (alpha_eta);
+    suffix += "-aa%f" % (alpha_alpha);
+    suffix += "-ag%f" % (alpha_gamma);
+    suffix += "-ae%f" % (alpha_eta);
     # suffix += "-%s" % (resample_topics);
     # suffix += "-%s" % (hash_oov_words);
     if split_merge_heuristics >= 0:

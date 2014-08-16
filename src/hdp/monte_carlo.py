@@ -40,8 +40,8 @@ class MonteCarlo(object):
                  merge_proposal=0,
                  split_merge_iteration=1,
                  restrict_gibbs_sampling_iteration=10,
-                 component_resampling_interval=1,
-                 hyper_optimizing_interval=100,
+                 component_resampling_interval=10,
+                 hyper_optimizing_interval=-1,
                  hash_oov_words=False
                  ):
         self._split_merge_heuristics = split_merge_heuristics;
@@ -207,7 +207,7 @@ class MonteCarlo(object):
         elif self._split_merge_heuristics > 0:
             self.split_merge();
             
-        if self._iteration_counter % self._hyper_optimizing_interval == 0:
+        if self._hyper_optimizing_interval>0 and self._iteration_counter % self._hyper_optimizing_interval==0:
             #self.optimize_log_hyperparameters();
             self.optimize_hyperparameters();
     

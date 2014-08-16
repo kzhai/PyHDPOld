@@ -39,6 +39,7 @@ $PYTHON_COMMAND -O -um hdp.launch \
     --snapshot_interval=$SnapshotInterval \
     --alpha_alpha=$AlphaAlpha \
     --alpha_gamma=$AlphaGamma \
+    --alpha_eta=$AlphaEta \
     --split_merge_heuristics=$SMH \
     --split_proposal=$SP \
     --merge_proposal=$MP \

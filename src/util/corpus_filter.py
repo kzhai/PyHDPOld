@@ -26,9 +26,10 @@ def filter():
     output_doc_stream = open(output_doc_file, "w");
     for line in input_doc_stream:
         line = line.strip();
-        if numpy.random.random()<percentage_of_data/100:
-            output_doc_stream.write("%s\n" % line)
-            
+        if numpy.random.random()>percentage_of_data/100:
+            continue;
+
+        output_doc_stream.write("%s\n" % line)
         tokens = line.split();
         for token in tokens:
             term_freq.inc(token);

@@ -1,0 +1,22 @@
+total number of words in target 818
+Gentle Reminder: are you using consistent stop-word list, word stemmer and string tokenizer?
+vocab size: 0
+loaded 10000000 lines in pmi-statistics...
+loaded 20000000 lines in pmi-statistics...
+loaded 30000000 lines in pmi-statistics...
+loaded 40000000 lines in pmi-statistics...
+loaded 50000000 lines in pmi-statistics...
+loaded 60000000 lines in pmi-statistics...
+time to load point-mutual-information statistics: 400 seconds
+Gentle Reminder: are you using consistent stop-word list, word stemmer and string tokenizer?
+time to load point-mutual-information statistics: 1408395033 seconds
+53	43.4869	-323.143	503	1e-05	1e-05	0.00114811	null
+47	45.7612	-318.663	442	1e-05	1e-05	0.00114811	crs
+50	46.9141	-308.208	474	1e-05	1e-05	0.00114811	rand
+46	52.1397	-309.146	433	1e-05	1e-05	0.00114811	rgs
+61	52.0252	-312.947	577	1e-05	1e-05	0.00114811	sa
+112	41.4262	-338.526	1087	0.001	0.001	0.00114811	null
+128	36.1391	-343.678	1240	0.001	0.001	0.00114811	crs
+131	34.7572	-345.572	1269	0.001	0.001	0.00114811	rand
+135	39.2821	-339.704	1310	0.001	0.001	0.00114811	rgs
+135	39.7239	-335.38	1312	0.001	0.001	0.00114811	sa

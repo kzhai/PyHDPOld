@@ -8,31 +8,36 @@ import numpy;
 
 class InnerTopicSimilarity():
     def evaluate(self, topic_file, top_words=10, topic_title_indicator='=========='):
-        #unitype_probdist = nltk.probability.WittenBellProbDist(self._unitype_freqdist, self._unitype_freqdist.B()+1);
-        #bitype_probdist = nltk.probability.WittenBellProbDist(self._bitype_freqdist, self._bitype_freqdist.B()+1);
-        
         input_stream = open(topic_file, 'r');
-        top_words_freq_dist = nltk.probability.FreqDist();
+        top_word_set = collections.defaultdict(set);
+        top_word_count = 0;
+        
         for line in input_stream:
             line = line.strip();
             content = line.split();
             
             if line.startswith(topic_title_indicator):
+                topic_id = int(content[1]);
+                top_word_set[topic_id] = set();
                 top_word_count = 0;
                 continue;
             
             if top_word_count >= top_words:
                 continue;
             
-            top_words_freq_dist.inc(content[0]);
+            top_word_set[topic_id].add(content[0]);
             top_word_count += 1;
         
-        inner_topic_similarity = 0;
-        for word in top_words_freq_dist.keys():
-            if top_words_freq_dist[word]<=1:
-                break;
-            inner_topic_similarity += (top_words_freq_dist[word]-1) * top_words_freq_dist[word];
-            
+        inner_topic_similarity = numpy.zeros((1, len(top_word_set)));
+        for topic_index_1 in xrange(len(top_word_set)):
+            for word in top_word_set[topic_index_1]:
+                for topic_index_2 in xrange(len(top_word_set)):
+                    if topic_index_2==topic_index_1:
+                        continue;
+                    if word in top_word_set[topic_index_2]:
+                        continue;
+                    inner_topic_similarity[0, topic_index_1] += 1;
+                
         return inner_topic_similarity
     
 def main():

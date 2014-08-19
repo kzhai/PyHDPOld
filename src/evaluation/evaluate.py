@@ -11,43 +11,43 @@ def main():
     model_result = {};
 
     pmi_statistics_file = sys.argv[1];
-    model_directory = sys.argv[2];
-    output_file_path = sys.argv[3];
+    input_file_path = sys.argv[2];
     
-    top_words = int(sys.argv[4]);
-    snapshot_index = int(sys.argv[5]);
+    model_directory = sys.argv[3];
+    output_file_path = sys.argv[4];
+    
+    top_words = int(sys.argv[5]);
+    snapshot_index = int(sys.argv[6]);
 
     clock = time.time();
-    if False:
-        target_word_list = None;
-    else:
-        target_word_list = {};
-        invert_target_word_list = {};
-        for model_name in os.listdir(model_directory):
-            sub_directory = os.path.join(model_directory, model_name);
-            if os.path.isfile(sub_directory):
+
+    target_word_list = {};
+    invert_target_word_list = {};
+    for model_name in os.listdir(model_directory):
+        sub_directory = os.path.join(model_directory, model_name);
+        if os.path.isfile(sub_directory):
+            continue;
+        
+        exp_beta_file = os.path.join(sub_directory, "exp_beta-%d" % (snapshot_index));
+        input = open(exp_beta_file, 'r');
+        top_word_counter = 0;
+        for line in input:
+            line = line.strip();
+            if line.startswith('=========='):
+                top_word_counter = 0;
                 continue;
-            
-            exp_beta_file = os.path.join(sub_directory, "exp_beta-%d" % (snapshot_index));
-            input = open(exp_beta_file, 'r');
-            top_word_counter = 0;
-            for line in input:
-                line = line.strip();
-                if line.startswith('=========='):
-                    top_word_counter = 0;
-                    continue;
-                if top_word_counter >= top_words + 1:
-                    continue;
-                model_settings = line.split();
-                top_word_counter += 1;
-                if model_settings[0] in target_word_list:
-                    continue;
-                else:
-                    target_word_list[model_settings[0]] = len(target_word_list);
-                    invert_target_word_list[len(invert_target_word_list)] = model_settings[0];
-                    
-        # target_word_list = target_word_list.keys();
-        print "total number of words in target %d" % len(target_word_list);
+            if top_word_counter >= top_words + 1:
+                continue;
+            model_settings = line.split();
+            top_word_counter += 1;
+            if model_settings[0] in target_word_list:
+                continue;
+            else:
+                target_word_list[model_settings[0]] = len(target_word_list);
+                invert_target_word_list[len(invert_target_word_list)] = model_settings[0];
+                
+    # target_word_list = target_word_list.keys();
+    print "total number of words in target %d" % len(target_word_list);
 
     import pointwise_mutual_information;
     pmi_scores = pointwise_mutual_information.PointwiseMutualInformation();
@@ -55,11 +55,18 @@ def main():
     clock = time.time() - clock;
     print 'time to load point-mutual-information statistics: %d seconds' % (clock);
     
+    import semantic_coherence;
+    clock = time.time();
+    sc_scores = semantic_coherence.SemanticCoherence(1e-3);
+    sc_scores.collect_statistics(os.path.join(input_file_path));
+    clock = time.time() - clock;
+    print 'time to load semantic coherence statistics: %d seconds' % (clock);
+    
     import inner_topic_similarity;
     its_scores = inner_topic_similarity.InnerTopicSimilarity();
     
     output_file = open(output_file_path, 'w');
-    output_file.write(", ".join(['topic', 'pmi', 'its', 'alpha', 'gamma', 'eta', 'inference']) + "\n");
+    output_file.write(", ".join(['topic', 'pmi', 'sc', 'its', 'alpha', 'gamma', 'eta', 'inference']) + "\n");
     for model_name in os.listdir(model_directory):
         sub_directory = os.path.join(model_directory, model_name);
         if os.path.isfile(sub_directory):
@@ -70,14 +77,28 @@ def main():
         gamma = float(model_settings[6].strip("ag"));
         eta = float(model_settings[7].strip("ae"));
         inference = "-".join(model_settings[8:]);
+        if inference=="":
+            inference = "null";
+        elif inference=="smh0":
+            inference = "crs";
+        elif inference=="smh1-sp0-mp0":
+            inference = "rand";
+        elif inference=="smh1-sp1-mp1":
+            inference = "rgs";
+        elif inference=="smh1-sp2-mp0":
+            inference = "sa";
+        else:
+            sys.stderr.write("warning: unrecognized inference...\n");
 
         snapshot_file = os.path.join(sub_directory, "exp_beta-%d" % (snapshot_index));
         pmi_score = pmi_scores.evaluate(snapshot_file, top_words, target_word_list);
+        sc_score = sc_scores.evaluate(snapshot_file, top_words)
         its_score = its_scores.evaluate(snapshot_file, top_words);
 
-        output_file.write("%d,%g,%d,%g,%g,%g,%s\n" % (pmi_score.shape[1], numpy.mean(pmi_score), its_score, alpha, gamma, eta, inference));
+        for topic_index in xrange(pmi_score.shape[1]):
+            output_file.write("%d,%g,%g,%d,%g,%g,%g,%s\n" % (topic_index, pmi_score[0, topic_index], sc_score[0, topic_index], its_score[0, topic_index], alpha, gamma, eta, inference));
         
-        print "%d\t%g\t%g\t%g\t%g\t%s" % (pmi_score.shape[1], numpy.mean(pmi_score), alpha, gamma, eta, inference);
+        print "%d\t%g\t%g\t%d\t%g\t%g\t%g\t%s" % (pmi_score.shape[1], numpy.mean(pmi_score), numpy.mean(sc_score), numpy.mean(its_score), alpha, gamma, eta, inference);
     
 if __name__ == '__main__':
     main()

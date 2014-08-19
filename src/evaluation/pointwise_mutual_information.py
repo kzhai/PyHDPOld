@@ -158,12 +158,11 @@ class PointwiseMutualInformation():
     
         return self._unitype_freqdist, self._bitype_freqdist
 
-    
     def evaluate(self, topic_file, top_words=10, target_vocab=None, topic_title_indicator='=========='):
         #unitype_probdist = nltk.probability.MLEProbDist(self._unitype_freqdist);
         #bitype_probdist = nltk.probability.MLEProbDist(self._bitype_freqdist);
-        unitype_probdist = nltk.probability.LidstoneProbDist(self._unitype_freqdist, 0.1, self._unitype_freqdist.B() + 1);
-        bitype_probdist = nltk.probability.LidstoneProbDist(self._bitype_freqdist, 0.1, self._unitype_freqdist.B()**2);
+        unitype_probdist = nltk.probability.LidstoneProbDist(self._unitype_freqdist, 0.001, self._unitype_freqdist.B() + 1);
+        bitype_probdist = nltk.probability.LidstoneProbDist(self._bitype_freqdist, 0.001, self._unitype_freqdist.B()**2);
         #unitype_probdist = nltk.probability.WittenBellProbDist(self._unitype_freqdist, self._unitype_freqdist.B()+1);
         #bitype_probdist = nltk.probability.WittenBellProbDist(self._bitype_freqdist, self._bitype_freqdist.B()+1);
         #bitype_probdist = nltk.probability.WittenBellProbDist(self._bitype_freqdist, self._unitype_freqdist.B()**2);

@@ -1,0 +1,19 @@
+total number of words in target 460
+Gentle Reminder: are you using consistent stop-word list, word stemmer and string tokenizer?
+vocab size: 0
+loaded 10000000 lines in pmi-statistics...
+loaded 20000000 lines in pmi-statistics...
+loaded 30000000 lines in pmi-statistics...
+loaded 40000000 lines in pmi-statistics...
+loaded 50000000 lines in pmi-statistics...
+loaded 60000000 lines in pmi-statistics...
+time to load point-mutual-information statistics: 459 seconds
+Gentle Reminder: are you using consistent stop-word list, word stemmer and string tokenizer?
+Traceback (most recent call last):
+  File "evaluation/evaluate.py", line 104, in <module>
+    main()
+  File "evaluation/evaluate.py", line 60, in main
+    sc_scores.collect_statistics(os.path.join(input_file_path));
+  File "/Users/kezhai/Workspace/PyHDP/src/evaluation/semantic_coherence.py", line 31, in collect_statistics
+    testing_docs = open(data_input_file, 'r');
+IOError: [Errno 21] Is a directory: '../input/ap-50'

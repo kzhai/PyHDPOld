@@ -27,8 +27,6 @@ negative_infinity = -1e500;
 # We will be taking log(0) = -Inf, so turn off this warning
 numpy.seterr(divide='ignore')
 
-# numpy.random.seed(100)
-
 class MonteCarlo(object):
     """
     @param truncation_level: the maximum number of clusters, used for speeding up the computation
@@ -98,7 +96,7 @@ class MonteCarlo(object):
         self._D = len(self._corpus)
         
         model_parameter = self.random_initialization(1, 1);
-        # model_parameter = self.random_initialization();
+        #model_parameter = self.random_initialization(30, 1);
         (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
             
         self._K = proposed_K;

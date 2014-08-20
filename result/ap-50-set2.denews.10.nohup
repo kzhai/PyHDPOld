@@ -7,13 +7,11 @@ loaded 30000000 lines in pmi-statistics...
 loaded 40000000 lines in pmi-statistics...
 loaded 50000000 lines in pmi-statistics...
 loaded 60000000 lines in pmi-statistics...
-time to load point-mutual-information statistics: 459 seconds
+time to load point-mutual-information statistics: 430 seconds
 Gentle Reminder: are you using consistent stop-word list, word stemmer and string tokenizer?
-Traceback (most recent call last):
-  File "evaluation/evaluate.py", line 104, in <module>
-    main()
-  File "evaluation/evaluate.py", line 60, in main
-    sc_scores.collect_statistics(os.path.join(input_file_path));
-  File "/Users/kezhai/Workspace/PyHDP/src/evaluation/semantic_coherence.py", line 31, in collect_statistics
-    testing_docs = open(data_input_file, 'r');
-IOError: [Errno 21] Is a directory: '../input/ap-50'
+time to load semantic coherence statistics: 38 seconds
+40	77.5615	-285.839	9.85128	1e-05	1e-05	0.001	null
+38	79.4591	-283.126	9.84495	1e-05	1e-05	0.001	crs
+40	76.801	-287.39	9.85769	1e-05	1e-05	0.001	rand
+39	84.8206	-276.641	9.861	1e-05	1e-05	0.001	rgs
+42	79.1749	-283.99	9.85714	1e-05	1e-05	0.001	sa

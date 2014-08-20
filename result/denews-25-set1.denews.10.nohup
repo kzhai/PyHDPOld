@@ -7,11 +7,11 @@ loaded 30000000 lines in pmi-statistics...
 loaded 40000000 lines in pmi-statistics...
 loaded 50000000 lines in pmi-statistics...
 loaded 60000000 lines in pmi-statistics...
-time to load point-mutual-information statistics: 417 seconds
+time to load point-mutual-information statistics: 501 seconds
 Gentle Reminder: are you using consistent stop-word list, word stemmer and string tokenizer?
-time to load point-mutual-information statistics: 1408412153 seconds
-46	18.9513	-286.927	447	1e-05	1e-05	0.000114	null
-54	28.7266	-284.548	528	1e-05	1e-05	0.000114	crs
-61	29.7732	-290.45	596	1e-05	1e-05	0.000114	rand
-60	33.1056	-285.055	586	1e-05	1e-05	0.000114	rgs
-75	26.3008	-290.351	736	1e-05	1e-05	0.000114	sa
+time to load semantic coherence statistics: 11 seconds
+46	18.9513	-286.927	9.95459	1e-05	1e-05	0.000114	null
+54	28.7266	-284.548	9.97135	1e-05	1e-05	0.000114	crs
+61	29.7732	-290.45	9.94098	1e-05	1e-05	0.000114	rand
+60	33.1056	-285.055	9.93955	1e-05	1e-05	0.000114	rgs
+75	26.3008	-290.351	9.95676	1e-05	1e-05	0.000114	sa

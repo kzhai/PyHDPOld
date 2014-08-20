@@ -106,7 +106,8 @@ def main():
             output_file.write("%d,%s,%g,%g,%g,%g,%s,%s\n" % (topic_index, "coh", sc_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
             output_file.write("%d,%s,%g,%g,%g,%g,%s,%s\n" % (topic_index, "itd", itd_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
         
+        #print "%d\t%g\t%g\t%g\t%g\t%g\t%s" % (pmi_score.shape[1], numpy.mean(pmi_score), numpy.mean(sc_score), alpha, gamma, eta, inference);
         print "%d\t%g\t%g\t%g\t%g\t%g\t%g\t%s" % (pmi_score.shape[1], numpy.mean(pmi_score), numpy.mean(sc_score), numpy.mean(itd_score), alpha, gamma, eta, inference);
-    
+        
 if __name__ == '__main__':
     main()

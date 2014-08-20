@@ -45,7 +45,7 @@ plot_pic <- ggplot(data=input_data, aes(x=factor(inference),  y=value, lower='25
 	geom_boxplot() +
 	facet_grid(metric ~ dataset, scales="free") +
 	#labs(size="Tokens Count") +
-	#labs(x="Word Index", y="Topic Index") +
+	labs(x="", y="") +
 
 	#scale_x_log10() +
 

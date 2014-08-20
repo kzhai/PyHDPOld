@@ -103,7 +103,7 @@ def main():
         for topic_index in xrange(pmi_score.shape[1]):
             #output_file.write("%d,%g,%g,%g,%g,%g,%g,%s,%s\n" % (topic_index, pmi_score[0, topic_index], sc_score[0, topic_index], itd_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
             output_file.write("%d,%s,%g,%g,%g,%g,%s,%s\n" % (topic_index, "pmi", pmi_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
-            output_file.write("%d,%s,%g,%g,%g,%g,%s,%s\n" % (topic_index, "coh", sc_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
+            output_file.write("%d,%s,%g,%g,%g,%g,%s,%s\n" % (topic_index, "scs", sc_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
             output_file.write("%d,%s,%g,%g,%g,%g,%s,%s\n" % (topic_index, "itd", itd_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
         
         #print "%d\t%g\t%g\t%g\t%g\t%g\t%s" % (pmi_score.shape[1], numpy.mean(pmi_score), numpy.mean(sc_score), alpha, gamma, eta, inference);

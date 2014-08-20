@@ -9,14 +9,15 @@ library(ggplot2)
 library(grid)
 library(scales)
 
-file_name="denews-25-set1.20news.10"
-#file_name="denews-25-set1.denews.10"
+#file_name="denews-25-set1.20news.10"
+file_name="denews-25-set1.denews.10"
 
 #file_name="denews-50-4K-10-3200-30-set1.denews.10"
 #file_name="denews-50-4K-10-3200-30-set2.denews.10"
 #file_name="denews-50-4K-10-3200-30-set3.denews.10"
 #file_name="denews-50-4K-10-3200-30-set4.denews.10"
 
+#file_name="ap-50-set3.20news.10"
 #file_name="ap-50-set3.denews.10"
 #file_name="ap-50-set2.denews.10"
 #file_name="ap-50-set1.denews.10"

@@ -14,6 +14,9 @@ def main():
     input_file_path = sys.argv[2];
     
     model_directory = sys.argv[3];
+    model_directory = model_directory.rstrip("/");
+    corpus_name = os.path.basename(model_directory);
+    
     output_file_path = sys.argv[4];
     
     top_words = int(sys.argv[5]);
@@ -57,16 +60,17 @@ def main():
     
     import semantic_coherence;
     clock = time.time();
-    sc_scores = semantic_coherence.SemanticCoherence(1e-3);
+    sc_scores = semantic_coherence.SemanticCoherence(0.001);
     sc_scores.collect_statistics(os.path.join(input_file_path));
     clock = time.time() - clock;
     print 'time to load semantic coherence statistics: %d seconds' % (clock);
     
-    import inner_topic_similarity;
-    its_scores = inner_topic_similarity.InnerTopicSimilarity();
+    import inter_topic_distance;
+    itd_scores = inter_topic_distance.InterTopicDistance();
     
     output_file = open(output_file_path, 'w');
-    output_file.write(", ".join(['topic', 'pmi', 'sc', 'its', 'alpha', 'gamma', 'eta', 'inference']) + "\n");
+    #output_file.write(", ".join(['topic', 'pmi', 'sc', 'its', 'alpha', 'gamma', 'eta', 'inference','dataset']) + "\n");
+    output_file.write(", ".join(['topic', 'metric', 'value', 'alpha', 'gamma', 'eta', 'inference','dataset']) + "\n");
     for model_name in os.listdir(model_directory):
         sub_directory = os.path.join(model_directory, model_name);
         if os.path.isfile(sub_directory):
@@ -93,12 +97,16 @@ def main():
         snapshot_file = os.path.join(sub_directory, "exp_beta-%d" % (snapshot_index));
         pmi_score = pmi_scores.evaluate(snapshot_file, top_words, target_word_list);
         sc_score = sc_scores.evaluate(snapshot_file, top_words)
-        its_score = its_scores.evaluate(snapshot_file, top_words);
+        itd_score = itd_scores.evaluate(snapshot_file, top_words);
+        itd_score /= (itd_score.shape[1]-1.0);
 
         for topic_index in xrange(pmi_score.shape[1]):
-            output_file.write("%d,%g,%g,%d,%g,%g,%g,%s\n" % (topic_index, pmi_score[0, topic_index], sc_score[0, topic_index], its_score[0, topic_index], alpha, gamma, eta, inference));
+            #output_file.write("%d,%g,%g,%g,%g,%g,%g,%s,%s\n" % (topic_index, pmi_score[0, topic_index], sc_score[0, topic_index], itd_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
+            output_file.write("%d,%s,%g,%g,%g,%g,%s,%s\n" % (topic_index, "pmi", pmi_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
+            output_file.write("%d,%s,%g,%g,%g,%g,%s,%s\n" % (topic_index, "coh", sc_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
+            output_file.write("%d,%s,%g,%g,%g,%g,%s,%s\n" % (topic_index, "itd", itd_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
         
-        print "%d\t%g\t%g\t%d\t%g\t%g\t%g\t%s" % (pmi_score.shape[1], numpy.mean(pmi_score), numpy.mean(sc_score), numpy.mean(its_score), alpha, gamma, eta, inference);
+        print "%d\t%g\t%g\t%g\t%g\t%g\t%g\t%s" % (pmi_score.shape[1], numpy.mean(pmi_score), numpy.mean(sc_score), numpy.mean(itd_score), alpha, gamma, eta, inference);
     
 if __name__ == '__main__':
     main()

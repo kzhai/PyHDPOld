@@ -17,7 +17,9 @@ library(scales)
 #file_name="ap-50-set2.denews.10"
 #file_name="ap-50-set1.denews.10"
 
-file_name="statistics.denews.10"
+file_name="nips-150-15K-50-1500-500.denews.10"
+
+#file_name="statistics.denews.10"
 
 #project_home="/windows/d/Workspace/PyHDP/"
 project_home="/Users/kezhai/Workspace/PyHDP/"

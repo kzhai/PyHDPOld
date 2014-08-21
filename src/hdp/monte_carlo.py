@@ -1138,7 +1138,7 @@ class MonteCarlo(object):
         
         cdf = numpy.cumsum(component_posterior);
         new_label = numpy.uint32(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
-        assert new_label >= 0 and new_label < proposed_K and numpy.dtype(new_label) == numpy.uint32;
+        assert new_label >= 0 and new_label < proposed_K;
         
         return new_label
 

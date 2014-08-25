@@ -43,5 +43,5 @@ $PYTHON_COMMAND -O -um hdp.launch \
     --split_merge_heuristics=$SMH \
     --split_proposal=$SP \
     --merge_proposal=$MP \
-    > $SCRATCH_DIRECTORY/output/$CorpusName/T$TrainingIteration\-aa$AlphaAlpha\-ag$AlphaGamma-ae$AlphaEta$PostFix\-init30.out
+    > $SCRATCH_DIRECTORY/output/$CorpusName/T$TrainingIteration\-aa$AlphaAlpha\-ag$AlphaGamma-ae$AlphaEta$PostFix\.out
 #    > $SCRATCH_DIRECTORY/output/$CorpusName/T$TrainingIteration\-aa$AlphaAlpha\-ag$AlphaGamma\-smh$SMH\-sp$SP\-mp$MP\.out

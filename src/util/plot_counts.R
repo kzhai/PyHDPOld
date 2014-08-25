@@ -40,7 +40,7 @@ plot_pic <- qplot(vocabulary, factor(topic), data=input_data, size=count) +
 	theme(legend.title = element_text(size = 12, angle = 0), legend.text = element_text(size = 15)) +
 	guides(colour = guide_legend(nrow = 1)) +
 	
-	#coord_cartesian(xlim=c(0.5, 25.5)) +
+	coord_cartesian(xlim=c(0.5, 25.5)) +
 	#coord_cartesian(ylim=c(0, 13, 2)) +
 	#scale_y_continuous(breaks = round(seq(-6000, -4000, by=1000), 1)) +
 	#scale_x_continuous(breaks = round(seq(1, 500, by=100), 1)) + 

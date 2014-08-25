@@ -28,7 +28,7 @@ mkdir $SCRATCH_DIRECTORY
 
 SET_PARAMETER
 
-SnapshotInterval=100
+SnapshotInterval=50
 
 mkdir $SCRATCH_DIRECTORY/output/$CorpusName
 

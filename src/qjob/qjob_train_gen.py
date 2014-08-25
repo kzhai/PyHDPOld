@@ -2,9 +2,10 @@ import os
 import sys
 
 #cn='ap-50-2K-10-700-100'
-cn='ap-50'
+#cn='ap-50'
 #cn='denews-50-4K-10-3200-30'
 #cn='denews-25'
+cn='nips-20'
 #cn='nips-150-15K-50-1500-500'
 #cn='pnas-100-10K-50-1K-20'
 
@@ -12,9 +13,9 @@ def generate_train_script():
     project_directory = os.path.abspath(sys.argv[1]);
     count = int(sys.argv[2]);
 
-    for train_iter in [500]:
+    for train_iter in [100]:
         #for (alpha_alpha, alpha_gamma, alpha_eta) in [(0.001, 0.001, 0), (0.00001, 0.00001, 0), (0.001, 0.001, 0.001), (0.00001, 0.00001, 0.001)]:
-        for (alpha_alpha, alpha_gamma, alpha_eta) in [(0.00001, 0.00001, 0), (0.00001, 0.00001, 0.001)]:
+        for (alpha_alpha, alpha_gamma, alpha_eta) in [(0.000001, 0.000001, 0)]:
             for (smh, sp, mp) in [(-1,0,0), (0,0,0), (1,0,0), (1,1,1), (1,2,0)]:
                 count += 1;
                 

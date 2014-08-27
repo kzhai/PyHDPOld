@@ -8,7 +8,7 @@ import sys
 cn='nips-20'
 #cn='nips-150-15K-50-1500-500'
 #cn='20news-10'
-cn='kos-50'
+#cn='kos-50'
 
 def generate_train_script():
     project_directory = os.path.abspath(sys.argv[1]);

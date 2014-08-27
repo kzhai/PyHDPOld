@@ -9,9 +9,10 @@ import re
 #cn='denews-25-set1'
 #cn='ap-50-set2'
 #cn='kos-50-set1'
-cn='kos-50-set2'
+#cn='kos-50-set2'
 #cn='20news-10'
-#cn='nips-150-15K-50-1500-500'
+cn='nips-150-15K-50-1500-500'
+#cn='nips-20'
 
 model_settings_pattern = re.compile('\d+-\d+-hdp-I(?P<iteration>\d+)-S(?P<snapshot>\d+)-aa(?P<alpha>[\d\.]+)-ag(?P<gamma>[\d\.]+)-ae(?P<eta>[\d\.]+)((?P<postfix>.+))?');
 

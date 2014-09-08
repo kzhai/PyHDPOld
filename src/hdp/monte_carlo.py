@@ -265,7 +265,7 @@ class MonteCarlo(object):
                 # sample a new table this word should sit in
                 table_probability /= numpy.sum(table_probability);
                 cdf = numpy.cumsum(table_probability);
-                new_table_id = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
+                new_table_id = numpy.uint(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
                 
                 # if current word sits on a new table, we need to get the topic of that table
                 if new_table_id == len(self._k_dt[document_index]):
@@ -289,7 +289,7 @@ class MonteCarlo(object):
                     # sample a new topic this table should be assigned
                     topic_probability /= numpy.sum(topic_probability);
                     cdf = numpy.cumsum(topic_probability);
-                    new_topic_id = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
+                    new_topic_id = numpy.int(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
                     
                     # if current table requires a new topic
                     if new_topic_id == self._K:
@@ -394,7 +394,7 @@ class MonteCarlo(object):
         topic_probability = numpy.exp(topic_log_probability);
         
         cdf = numpy.cumsum(topic_probability);
-        new_topic_id = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
+        new_topic_id = numpy.uint(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
         
         # if the table is assigned to a new topic
         if new_topic_id == self._K:
@@ -1137,7 +1137,7 @@ class MonteCarlo(object):
         component_posterior = numpy.exp(component_log_posterior);
         
         cdf = numpy.cumsum(component_posterior);
-        new_label = numpy.uint32(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
+        new_label = numpy.uint(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
         assert new_label >= 0 and new_label < proposed_K;
         
         return new_label

@@ -6,7 +6,7 @@ import collections;
 import nltk;
 import numpy;
 
-class InterTopicDistance():
+class TopicUniqueness():
     def evaluate(self, topic_file, top_words=10, topic_title_indicator='=========='):
         input_stream = open(topic_file, 'r');
         top_word_set = collections.defaultdict(set);

@@ -13,7 +13,7 @@ def parse_args():
     parser.set_defaults(# parameter set 1
                         input_directory=None,
                         #output_directory=None,
-                        snapshot_index=1000,
+                        snapshot_index=500,
                         training_iterations=1000
                         )
     # parameter set 1
@@ -22,7 +22,7 @@ def parse_args():
     #parser.add_option("--output_directory", type="string", dest="output_directory",
                       #help="output directory [None]");
     parser.add_option("--snapshot_index", type="int", dest="snapshot_index",
-                      help="snapshot index [1000]");
+                      help="snapshot index [500]");
                       
     parser.add_option("--training_iterations", type="int", dest="training_iterations",
                       help="number of training iterations [1000]");

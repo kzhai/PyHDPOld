@@ -4,6 +4,9 @@ import scipy;
 import optparse;
 import datetime;
 import os;
+import matplotlib
+import matplotlib.pyplot
+import matplotlib.pylab
     
 def parse_args():
     parser = optparse.OptionParser()
@@ -65,7 +68,7 @@ def main():
         output_file_stream.write("%d\n" % (type_id));
     output_file_stream.close();
     
-    beta = numpy.zeros(number_of_vocabularies) + 1.0/number_of_vocabularies;
+    beta = numpy.zeros(number_of_vocabularies) + 2.0/number_of_vocabularies;
     topic_vocabulary_probability = numpy.zeros((number_of_topics, number_of_vocabularies));
     
     output_file_stream = open(os.path.join(output_directory, "topic.dat"), 'w');
@@ -87,6 +90,23 @@ def main():
         
         output_file_stream.write("%s\n" % (" ".join(doc)));
     output_file_stream.close();
-
+    
+    # plot the vocabulary distribution per topic
+    x_ticks = numpy.arange(number_of_vocabularies);
+    width = 0.5;
+    
+    axis = matplotlib.pylab.subplot(number_of_topics, 1, 0)
+    axis.bar(x_ticks-width, topic_vocabulary_probability[0, :], 1, color='g')
+    axis.set_xlim(x_ticks[0]-width, x_ticks[-1]+width);
+    for topic_index in xrange(1, number_of_topics):
+        ax1 = matplotlib.pylab.subplot(number_of_topics, 1, topic_index, sharex=axis, sharey=axis);
+        ax1.bar(x_ticks-width, topic_vocabulary_probability[topic_index, :], 1, color='g')
+        ax1.set_xlim(x_ticks[0]-width, x_ticks[-1]+width);
+        matplotlib.pylab.setp(ax1.get_xticklabels(), fontsize=2.5, visible=False)
+    axis.set_xticks(x_ticks);
+    
+    figure_path = os.path.join(output_directory, "topic.pdf");
+    matplotlib.pyplot.savefig(figure_path);
+    
 if __name__ == '__main__':
     main();

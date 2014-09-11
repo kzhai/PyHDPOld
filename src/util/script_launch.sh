@@ -1,11 +1,12 @@
 #!/bin/bash
 
 #DATA_PATH="140730-224558-k10-d1000-vpk10-wpd30-False"
-DATA_PATH="140806-165121-k5-d500-vpk5-wpd30-False-sample10-random"
-TRAINING_ITERATION=1000
+#DATA_PATH="140911-110426-k5-d200-v20-wpd30-False"
+DATA_PATH="140911-141458-k5-d500-v20-wpd30-False"
+TRAINING_ITERATION=2000
 ALPHA_ALPHA=0.1
 
-PROJECT_HOME="/Users/kezhai/Workspace/PyHDP"
+PROJECT_HOME="/windows/d/Workspace/PyHDP"
 
 cd $PROJECT_HOME\/src
 mkdir $PROJECT_HOME\/output\/$DATA_PATH
@@ -38,7 +39,7 @@ nohup python -O \
     --training_iteration=$TRAINING_ITERATION \
     --alpha_alpha=$ALPHA_ALPHA \
     --split_merge_heuristics=1 \
-    > $PROJECT_HOME\/output/$DATA_PATH\/nohup.smh1.sp0.mp0.out &
+    > $PROJECT_HOME\/output/$DATA_PATH\/nohup.smh1-sp0-mp0.out &
 	
 sleep 1
 
@@ -51,7 +52,7 @@ nohup python -O \
     --split_merge_heuristics=1 \
     --split_proposal=1 \
     --merge_proposal=1 \
-    > $PROJECT_HOME\/output/$DATA_PATH\/nohup.smh1.sp1.mp1.out &
+    > $PROJECT_HOME\/output/$DATA_PATH\/nohup.smh1-sp1-mp1.out &
 	
 sleep 1
 
@@ -64,4 +65,4 @@ nohup python -O \
     --split_merge_heuristics=1 \
     --split_proposal=2 \
     --merge_proposal=0 \
-    > $PROJECT_HOME\/output/$DATA_PATH\/nohup.smh1.sp2.mp0.out &
+    > $PROJECT_HOME\/output/$DATA_PATH\/nohup.smh1-sp2-mp0.out &

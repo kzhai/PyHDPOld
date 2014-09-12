@@ -38,7 +38,7 @@ class MonteCarlo(object):
                  merge_proposal=0,
                  split_merge_iteration=1,
                  restrict_gibbs_sampling_iteration=10,
-                 component_resampling_interval=10,
+                 component_resampling_interval=1,
                  hyper_optimizing_interval=-1,
                  hash_oov_words=False
                  ):

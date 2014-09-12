@@ -31,7 +31,7 @@ def parse_args():
                       help="output file [None]");                      
     #parser.add_option("--snapshot_index", type="int", dest="snapshot_index",
                       #help="snapshot index [-1]");
-                      
+    
     (options, args) = parser.parse_args();
     return options;
 

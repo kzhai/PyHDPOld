@@ -31,7 +31,7 @@ input_data <- read.csv(input_file)
 
 plot_pic <- qplot(vocabulary, factor(topic), data=input_data, size=count) +
 	facet_grid(inference ~ ., scales="free", space="free") +
-	labs(size="Tokens Count") +
+	labs(size="Word Probability") +
 	labs(x="Word Index", y="Topic Index") +
 
 	#scale_x_log10() +

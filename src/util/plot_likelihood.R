@@ -26,7 +26,10 @@ pdf(width=6, height=2.8)
 # load in csv data
 input_data <- read.csv(input_file)
 
+input_data$iteration <- input_data$iteration / 1.6
 input_data$likelihood <- input_data$likelihood / 6026
+
+input_data <- subset(input_data, input_data$iteration>=100 & input_data$iteration<=1000)
 
 plot_pic <- ggplot() +
 	geom_line(data=input_data, aes(x=iteration, y=likelihood, color=inference, group=inference), alpha=0.75, size=1) +
@@ -42,7 +45,7 @@ plot_pic <- ggplot() +
 	theme(legend.title = element_text(size = 0, angle = 90), legend.text = element_text(size = 13)) +
 	
 	coord_cartesian(ylim=c(-2.4,-2.25)) +
-    	coord_cartesian(xlim=c(100,1000)) +
+    	#coord_cartesian(xlim=c(100,1000)) +
 	#scale_y_continuous(breaks = round(seq(-6000, -4000, by=1000), 1)) +
 	scale_x_continuous(breaks = round(seq(200, 1000, by=200), 1)) + 
 	

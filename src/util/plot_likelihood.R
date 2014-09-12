@@ -26,9 +26,7 @@ pdf(width=6, height=2.8)
 # load in csv data
 input_data <- read.csv(input_file)
 
-#input_data <- subset(input_data, input_data$iteration<=500)
-input_data$iteration <- input_data$iteration / 1.6
-input_data$likelihood <- input_data$likelihood / 6026
+#input_data$likelihood <- input_data$likelihood / 6026
 
 plot_pic <- ggplot() +
 	geom_line(data=input_data, aes(x=iteration, y=likelihood, color=inference, group=inference), alpha=0.75, size=1) +

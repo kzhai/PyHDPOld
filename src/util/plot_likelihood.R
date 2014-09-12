@@ -44,7 +44,7 @@ plot_pic <- ggplot() +
 	theme(legend.title = element_text(size = 0, angle = 90), legend.text = element_text(size = 13)) +
 	
 	coord_cartesian(ylim=c(-2.4,-2.25)) +
-    	coord_cartesian(xlim=c(20,1000)) +
+    	coord_cartesian(xlim=c(100,1000)) +
 	#scale_y_continuous(breaks = round(seq(-6000, -4000, by=1000), 1)) +
 	scale_x_continuous(breaks = round(seq(200, 1000, by=200), 1)) + 
 	

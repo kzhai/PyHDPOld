@@ -1208,7 +1208,7 @@ class MonteCarlo(object):
         assert numpy.all(self._m_k >= 0);
         
         # sample cluster assignment for all the points in the current cluster
-        # for old_component_label in numpy.random.permutation(xrange(self._K)):
+        #for old_component_label in numpy.random.permutation(self._K):
         for old_component_label in numpy.argsort(self._m_k):
             # if this cluster is empty, no need to resample the cluster assignment
             if self._m_k[old_component_label] <= 0:

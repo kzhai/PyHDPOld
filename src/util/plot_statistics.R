@@ -28,7 +28,8 @@ library(scales)
 file_name="statistics.10"
 
 #project_home="/windows/d/Workspace/PyHDP/"
-project_home="/Users/kezhai/Workspace/PyHDP/"
+#project_home="/Users/kezhai/Workspace/PyHDP/"
+project_home="/Users/student/Workspace/PyHDP/"
 
 input_directory=paste(project_home, "result/", sep="");
 output_directory=paste(project_home, "figure/", sep="");

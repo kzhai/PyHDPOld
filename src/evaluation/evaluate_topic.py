@@ -65,8 +65,8 @@ def main():
     clock = time.time() - clock;
     print 'time to load semantic coherence statistics: %d seconds' % (clock);
     
-    import inter_topic_distance;
-    itd_scores = inter_topic_distance.InterTopicDistance();
+    import topic_uniqueness;
+    itd_scores = topic_uniqueness.TopicUniqueness();
     
     output_file = open(output_file_path, 'w');
     #output_file.write(", ".join(['topic', 'pmi', 'sc', 'its', 'alpha', 'gamma', 'eta', 'inference','dataset']) + "\n");
@@ -97,17 +97,17 @@ def main():
         snapshot_file = os.path.join(sub_directory, "exp_beta-%d" % (snapshot_index));
         pmi_score = pmi_scores.evaluate(snapshot_file, top_words, target_word_list);
         sc_score = sc_scores.evaluate(snapshot_file, top_words)
-        itd_score = itd_scores.evaluate(snapshot_file, top_words);
-        itd_score /= (itd_score.shape[1]-1.0);
+        tu_score = itd_scores.evaluate(snapshot_file, top_words);
+        tu_score /= (tu_score.shape[1]-1.0);
 
         for topic_index in xrange(pmi_score.shape[1]):
-            #output_file.write("%d,%g,%g,%g,%g,%g,%g,%s,%s\n" % (topic_index, pmi_score[0, topic_index], sc_score[0, topic_index], itd_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
+            #output_file.write("%d,%g,%g,%g,%g,%g,%g,%s,%s\n" % (topic_index, pmi_score[0, topic_index], sc_score[0, topic_index], tu_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
             output_file.write("%d,%s,%g,%g,%g,%g,%s,%s\n" % (topic_index, "pmi", pmi_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
             output_file.write("%d,%s,%g,%g,%g,%g,%s,%s\n" % (topic_index, "scs", sc_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
-            output_file.write("%d,%s,%g,%g,%g,%g,%s,%s\n" % (topic_index, "itd", itd_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
+            output_file.write("%d,%s,%g,%g,%g,%g,%s,%s\n" % (topic_index, "tu", tu_score[0, topic_index], alpha, gamma, eta, inference, corpus_name));
         
         #print "%d\t%g\t%g\t%g\t%g\t%g\t%s" % (pmi_score.shape[1], numpy.mean(pmi_score), numpy.mean(sc_score), alpha, gamma, eta, inference);
-        print "%d\t%g\t%g\t%g\t%g\t%g\t%g\t%s" % (pmi_score.shape[1], numpy.mean(pmi_score), numpy.mean(sc_score), numpy.mean(itd_score), alpha, gamma, eta, inference);
+        print "%d\t%g\t%g\t%g\t%g\t%g\t%g\t%s" % (pmi_score.shape[1], numpy.mean(pmi_score), numpy.mean(sc_score), numpy.mean(tu_score), alpha, gamma, eta, inference);
         
 if __name__ == '__main__':
     main()

@@ -51,18 +51,30 @@ def main():
     input_directory = options.input_directory;
     input_directory = input_directory.rstrip("/");
     dataset_name = os.path.basename(input_directory);
-
-    '''
+    
     input_voc_file = os.path.join(input_directory, "voc.dat");
     input_voc_file_stream = open(input_voc_file, 'r');
-    vocab_set = set();
+    topic_indices = set();
+    vocab_mapping = {};
     for line in input_voc_file_stream:
         line = line.strip();
-        vocab_set.add(int(line.strip()));
-    '''
-        
-    n_kv = parse_beta_file(os.path.join(input_directory, "topic.dat"));
+        vocab_mapping[line] = len(vocab_mapping);
+        line = line.strip("k");
+        tokens = line.split('v');
+        topic_index = int(tokens[0]);
+        topic_indices.add(topic_index);
     
+    input_doc_file = os.path.join(input_directory, "doc.dat");
+    input_doc_file_stream = open(input_doc_file, 'r');
+    n_kv = numpy.zeros((len(topic_indices), len(vocab_mapping)));
+    for line in input_doc_file_stream:
+        line = line.strip();
+        tokens = line.split();
+        for token in tokens:
+            vocab_index = vocab_mapping[token];
+            topic_index = int(token.strip("k").split("v")[0]);
+            n_kv[topic_index, vocab_index] += 1;
+
     # extract information from nohup.out files
     output_file = options.output_file;
     output_file_stream = open(output_file, "w");
@@ -73,7 +85,7 @@ def main():
         for vocab_index in xrange(number_of_columns):
             if n_kv[topic_index, vocab_index]==0:
                 continue;
-            output_file_stream.write("%s,%d,%d,%g\n" % ("true", topic_index + 1, vocab_index + 1, n_kv[topic_index, vocab_index]));    
+            output_file_stream.write("%s,%d,%d,%d\n" % ("true", topic_index + 1, vocab_index + 1, n_kv[topic_index, vocab_index]));    
     
     output_directory = options.output_directory;
     snapshot_index = options.snapshot_index;
@@ -108,52 +120,26 @@ def main():
         else:
             print "unrecognized model patterns %s" % model_name
             continue;
+
+        snapshot_file = os.path.join(output_model_path, "n_kv-%d" % (snapshot_index));
+        if not os.path.exists(snapshot_file):
+            continue;
         
-        n_kv = parse_beta_file(os.path.join(output_model_path, "exp_beta-%d" % (snapshot_index)));
+        n_kv = numpy.loadtxt(snapshot_file);
         (number_of_rows, number_of_columns) = n_kv.shape;
-        
+        topic_rank = numpy.zeros(number_of_rows);
+        for topic_index in xrange(number_of_rows):
+            for vocab_index in xrange(number_of_columns):
+                topic_rank[topic_index] += vocab_index * n_kv[topic_index, vocab_index];
+        topic_order = numpy.argsort(topic_rank);
+        n_kv = n_kv[topic_order, :];
         for topic_index in xrange(number_of_rows):
             for vocab_index in xrange(number_of_columns):
                 if n_kv[topic_index, vocab_index]==0:
                     continue;
-                output_file_stream.write("%s,%d,%d,%g\n" % (inference, topic_index + 1, vocab_index + 1, n_kv[topic_index, vocab_index]));    
+                output_file_stream.write("%s,%d,%d,%d\n" % (inference, topic_index + 1, vocab_index + 1, n_kv[topic_index, vocab_index]));    
         
         print "successfully parsed output %s..." % (model_name);
-
-def parse_beta_file(beta_file_path):
-    n_kv = numpy.zeros((0, 0));
-    
-    topic_index = -1;
-    input_stream = open(beta_file_path, 'r');
-    for line in input_stream:
-        line = line.strip();
-        tokens = line.split();
-        if len(tokens)==3:
-            assert tokens[0]=="==========";
-            assert tokens[2]=="==========";
-            topic_index = int(tokens[1]);
-            n_kv = numpy.vstack((n_kv, numpy.zeros((1, n_kv.shape[1]))))
-        else:
-            vocabulary_index = int(tokens[0]);
-            if vocabulary_index>=n_kv.shape[1]:
-                n_kv = numpy.hstack((n_kv, numpy.zeros((n_kv.shape[0], vocabulary_index-n_kv.shape[1]+1))));
-            n_kv[topic_index, vocabulary_index] = float(tokens[1]);
-
-    (number_of_topics, number_of_vocabularies) = n_kv.shape;
-    topic_weights = numpy.argmax(n_kv, axis=1);
-    '''
-    vocab_weights = numpy.arange(number_of_vocabularies)[numpy.newaxis, :]
-    #vocab_weights = numpy.cumsum(vocab_weights, axis=1);
-    vocab_weights = vocab_weights.T;
-    topic_weights = numpy.dot(n_kv, vocab_weights)[:, 0];
-    '''
-    print topic_weights;
-    topic_ranking = numpy.argsort(topic_weights);
-    print topic_ranking
-    
-    n_kv = n_kv[topic_ranking, :];
-    
-    return n_kv;
-    
+        
 if __name__ == '__main__':
     main()

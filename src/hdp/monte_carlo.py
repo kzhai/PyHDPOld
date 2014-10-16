@@ -38,7 +38,7 @@ class MonteCarlo(object):
                  merge_proposal=0,
                  split_merge_iteration=1,
                  restrict_gibbs_sampling_iteration=10,
-                 component_resampling_interval=10,
+                 component_resampling_interval=1,
                  hyper_optimizing_interval=-1,
                  hash_oov_words=False
                  ):
@@ -265,7 +265,7 @@ class MonteCarlo(object):
                 # sample a new table this word should sit in
                 table_probability /= numpy.sum(table_probability);
                 cdf = numpy.cumsum(table_probability);
-                new_table_id = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
+                new_table_id = numpy.uint(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
                 
                 # if current word sits on a new table, we need to get the topic of that table
                 if new_table_id == len(self._k_dt[document_index]):
@@ -289,7 +289,7 @@ class MonteCarlo(object):
                     # sample a new topic this table should be assigned
                     topic_probability /= numpy.sum(topic_probability);
                     cdf = numpy.cumsum(topic_probability);
-                    new_topic_id = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
+                    new_topic_id = numpy.int(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
                     
                     # if current table requires a new topic
                     if new_topic_id == self._K:
@@ -394,7 +394,7 @@ class MonteCarlo(object):
         topic_probability = numpy.exp(topic_log_probability);
         
         cdf = numpy.cumsum(topic_probability);
-        new_topic_id = numpy.uint8(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
+        new_topic_id = numpy.uint(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
         
         # if the table is assigned to a new topic
         if new_topic_id == self._K:
@@ -1100,6 +1100,66 @@ class MonteCarlo(object):
         # compute the prior of being in any of the clusters
         temp_m_k = numpy.copy(proposed_m_k);
         temp_m_k[component_label] = self._alpha_alpha;
+        #total_table_count = numpy.sum(proposed_m_k);
+        
+        component_log_prior = scipy.special.gammaln(temp_m_k + proposed_m_k[component_label]);
+        component_log_prior -= scipy.special.gammaln(temp_m_k);
+        
+        # adjust for current cluster label
+        component_log_prior[component_label] = numpy.log(self._alpha_alpha) + scipy.special.gammaln(proposed_m_k[component_label]);
+        
+        #component_log_prior += scipy.special.gammaln(total_table_count - proposed_m_k[component_label] + self._alpha_alpha);
+        #component_log_prior -= scipy.special.gammaln(total_table_count + self._alpha_alpha);
+        
+        # compute the likelihood of being in any of the clusters
+        n_k = numpy.sum(proposed_n_kv, axis=1);
+
+        component_log_likelihood = numpy.zeros(proposed_K);
+        for topic_index in xrange(proposed_K):
+            if proposed_m_k[topic_index] == 0:
+                component_log_likelihood[topic_index] = negative_infinity;
+                continue;
+            
+            # compute the probability of being in current cluster
+            if topic_index == component_label:
+                component_log_likelihood[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
+                component_log_likelihood[topic_index] -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[component_label]);
+                component_log_likelihood[topic_index] += numpy.sum(scipy.special.gammaln(proposed_n_kv[component_label, :] + self._alpha_eta));
+                component_log_likelihood[topic_index] -= self._vocabulary_size * scipy.special.gammaln(self._alpha_eta);
+            else:
+                component_log_likelihood[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index]);
+                # component_log_likelihood[topic_index] = scipy.special.gammaln(self._vocabulary_size * self._alpha_eta);
+                component_log_likelihood[topic_index] -= scipy.special.gammaln(self._vocabulary_size * self._alpha_eta + n_k[topic_index] + n_k[component_label]);
+                component_log_likelihood[topic_index] += numpy.sum(scipy.special.gammaln(proposed_n_kv[topic_index, :] + proposed_n_kv[component_label, :] + self._alpha_eta));
+                component_log_likelihood[topic_index] -= numpy.sum(scipy.special.gammaln(proposed_n_kv[topic_index, :] + self._alpha_eta));
+                # component_log_likelihood[topic_index] -= self._vocabulary_size * scipy.special.gammaln(self._alpha_eta);
+        
+        # normalize the posterior distribution
+        component_log_posterior = component_log_prior + component_log_likelihood;
+        component_log_posterior -= scipy.misc.logsumexp(component_log_posterior);
+        component_posterior = numpy.exp(component_log_posterior);
+        
+        cdf = numpy.cumsum(component_posterior);
+        new_label = numpy.uint(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
+        assert new_label >= 0 and new_label < proposed_K;
+        
+        return new_label
+
+    def old_propose_component_to_merge(self, component_label, model_parameter=None):
+        if model_parameter == None:
+            proposed_K = self._K;
+            proposed_n_kv = self._n_kv;
+            proposed_m_k = self._m_k;
+            proposed_n_dk = self._n_dk;
+            proposed_n_dt = self._n_dt;
+            proposed_t_dv = self._t_dv;
+            proposed_k_dt = self._k_dt;
+        else:
+            (proposed_K, proposed_n_kv, proposed_m_k, proposed_n_dk, proposed_n_dt, proposed_t_dv, proposed_k_dt) = model_parameter;
+        
+        # compute the prior of being in any of the clusters
+        temp_m_k = numpy.copy(proposed_m_k);
+        temp_m_k[component_label] = self._alpha_alpha;
         total_table_count = numpy.sum(proposed_m_k);
         
         component_log_prior = scipy.special.gammaln(temp_m_k + proposed_m_k[component_label]);
@@ -1137,7 +1197,7 @@ class MonteCarlo(object):
         component_posterior = numpy.exp(component_log_posterior);
         
         cdf = numpy.cumsum(component_posterior);
-        new_label = numpy.uint32(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
+        new_label = numpy.uint(numpy.nonzero(cdf >= numpy.random.random())[0][0]);
         assert new_label >= 0 and new_label < proposed_K;
         
         return new_label
@@ -1151,7 +1211,7 @@ class MonteCarlo(object):
         assert numpy.all(self._m_k >= 0);
         
         # sample cluster assignment for all the points in the current cluster
-        # for old_component_label in numpy.random.permutation(xrange(self._K)):
+        #for old_component_label in numpy.random.permutation(self._K):
         for old_component_label in numpy.argsort(self._m_k):
             # if this cluster is empty, no need to resample the cluster assignment
             if self._m_k[old_component_label] <= 0:

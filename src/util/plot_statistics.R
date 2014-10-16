@@ -28,7 +28,8 @@ library(scales)
 file_name="statistics.10"
 
 #project_home="/windows/d/Workspace/PyHDP/"
-project_home="/Users/kezhai/Workspace/PyHDP/"
+#project_home="/Users/kezhai/Workspace/PyHDP/"
+project_home="/Users/student/Workspace/PyHDP/"
 
 input_directory=paste(project_home, "result/", sep="");
 output_directory=paste(project_home, "figure/", sep="");
@@ -41,13 +42,12 @@ pdf(width=8, height=5)
 # load in csv data
 input_data <- read.csv(input_file)
 
-my_function<-function(x){data.frame(ymin=mean(x)-sd(x),ymax=mean(x)+sd(x),y=mean(x))}
+#my_function<-function(x){data.frame(ymin=mean(x)-sd(x),ymax=mean(x)+sd(x),y=mean(x))}
 #dodge = position_dodge(width=0.9)
 
-plot_pic <- ggplot(data=input_data, aes(x=factor(inference), y=value)) +
-	stat_summary(fun.y = mean, geom = "bar", position = "dodge", alpha=0.5) +
-	stat_summary(fun.data = my_function, geom = "pointrange", position = position_dodge(width = 0.90)) 	 
-	
+#plot_pic <- ggplot(data=input_data, aes(x=factor(inference), y=value)) +
+	#stat_summary(fun.y = mean, geom = "bar", position = "dodge", alpha=0.5) +
+	#stat_summary(fun.data = my_function, geom = "pointrange", position = position_dodge(width = 0.90)) 	 
   	
 plot_pic <- ggplot(data=input_data, aes(x=factor(inference),  y=value, lower='25%', middle='50%', upper='75%')) +
 	geom_boxplot() +

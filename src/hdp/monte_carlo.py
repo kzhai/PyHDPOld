@@ -1100,13 +1100,16 @@ class MonteCarlo(object):
         # compute the prior of being in any of the clusters
         temp_m_k = numpy.copy(proposed_m_k);
         temp_m_k[component_label] = self._alpha_alpha;
-        total_table_count = numpy.sum(proposed_m_k);
+        #total_table_count = numpy.sum(proposed_m_k);
         
         component_log_prior = scipy.special.gammaln(temp_m_k + proposed_m_k[component_label]);
         component_log_prior -= scipy.special.gammaln(temp_m_k);
         
-        component_log_prior += scipy.special.gammaln(total_table_count - proposed_m_k[component_label] + self._alpha_alpha);
-        component_log_prior -= scipy.special.gammaln(total_table_count + self._alpha_alpha);
+        # adjust for current cluster label
+        component_log_prior[component_label] = numpy.log(self._alpha_alpha) + scipy.special.gammaln(proposed_m_k[component_label]);
+        
+        #component_log_prior += scipy.special.gammaln(total_table_count - proposed_m_k[component_label] + self._alpha_alpha);
+        #component_log_prior -= scipy.special.gammaln(total_table_count + self._alpha_alpha);
         
         # compute the likelihood of being in any of the clusters
         n_k = numpy.sum(proposed_n_kv, axis=1);

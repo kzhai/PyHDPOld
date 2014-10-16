@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -N
-#PBS -l mem=4gb,walltime=24:00:00
-#PBS -q batch
+#PBS -l mem=4gb,walltime=48:00:00
+#PBS -q dque
 #PBS -M zhaikedavy@gmail.com
 #PBS -m ae
 #PBS -k e
@@ -28,7 +28,7 @@ mkdir $SCRATCH_DIRECTORY
 
 SET_PARAMETER
 
-SnapshotInterval=50
+SnapshotInterval=100
 
 mkdir $SCRATCH_DIRECTORY/output/$CorpusName
 

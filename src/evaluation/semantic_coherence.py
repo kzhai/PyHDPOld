@@ -37,12 +37,12 @@ class SemanticCoherence():
             content = line.split();
             content = list(set(content));
             for index1 in xrange(len(content)):
-                self._unitype_freqdist.inc(content[index1]);
+                self._unitype_freqdist[content[index1]]+=1;
                 for index2 in xrange(index1+1, len(content)):
                     if content[index1] < content[index2]:
-                        self._bitype_freqdist.inc((content[index1], content[index2]));
+                        self._bitype_freqdist[(content[index1], content[index2])]+=1;
                     elif content[index2] < content[index1]:
-                        self._bitype_freqdist.inc((content[index2], content[index1]));
+                        self._bitype_freqdist[(content[index2], content[index1])]+=1;
 
     def evaluate(self, topic_file, top_words=10, topic_title_indicator='=========='):
         #unitype_probdist = nltk.probability.WittenBellProbDist(self._unitype_freqdist, self._unitype_freqdist.B()+1);
@@ -140,10 +140,10 @@ def main():
         content = line.split();
         content = list(set(content));
         for index1 in xrange(len(content)):
-            unitoken_freqdist.inc(content[index1]);
+            unitoken_freqdist[content[index1]]+=1;
             for index2 in xrange(len(content)):
-                bitoken_freqdist.inc((content[index1], content[index2]), 0.5);
-                bitoken_freqdist.inc((content[index2], content[index1]), 0.5);
+                bitoken_freqdist[(content[index1], content[index2])]+=0.5;
+                bitoken_freqdist[(content[index2], content[index1])]+=0.5;
                 
                 '''
                 if index1==index2:

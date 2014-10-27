@@ -1,8 +1,4 @@
-from nltk.corpus import stopwords;
-from nltk.probability import FreqDist;
-
 import os, sys
-import nltk;
 import numpy;
 import matplotlib;
 import time;

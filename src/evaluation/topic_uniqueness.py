@@ -98,10 +98,10 @@ def main():
         content = line.split();
         content = list(set(content));
         for index1 in xrange(len(content)):
-            unitoken_freqdist.inc(content[index1]);
+            unitoken_freqdist[content[index1]]+=1;
             for index2 in xrange(len(content)):
-                bitoken_freqdist.inc((content[index1], content[index2]), 0.5);
-                bitoken_freqdist.inc((content[index2], content[index1]), 0.5);
+                bitoken_freqdist[(content[index1], content[index2])]+=0.5;
+                bitoken_freqdist[(content[index2], content[index1])]+=0.5;
                 
                 '''
                 if index1==index2:

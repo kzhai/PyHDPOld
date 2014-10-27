@@ -54,7 +54,7 @@ class PointwiseMutualInformation():
                 
             for index1 in xrange(len(words)):
                 word1 = words[index1];
-                self._unitype_freqdist.inc(word1);
+                self._unitype_freqdist[word1]+=1;
                 
                 if self._window_size == -1:
                     index_end = len(words);
@@ -65,9 +65,9 @@ class PointwiseMutualInformation():
                     word2 = words[index2]
                     
                     if word1 < word2:
-                        self._bitype_freqdist.inc((word1, word2));
+                        self._bitype_freqdist[(word1, word2)]+=1;
                     elif word1 > word2:
-                        self._bitype_freqdist.inc((word2, word1));
+                        self._bitype_freqdist[(word2, word1)]+=1;
             
             if i%1000 == 0:
                 print "collected pmi statistics from %d documents" % (i);
@@ -117,9 +117,9 @@ class PointwiseMutualInformation():
                 content = line.split();
                 if len(content)==2:
                     if content[0] in target_vocab:
-                        self._unitype_freqdist.inc(target_vocab[content[0]], float(content[1]));
+                        self._unitype_freqdist[target_vocab[content[0]]]+=float(content[1]);
                     else:
-                        self._unitype_freqdist.inc(content[0], float(content[1]));
+                        self._unitype_freqdist[content[0]]+=float(content[1]);
                     #if content[0] in target_vocab:
                         #_unitype_freqdist.inc(content[0], float(content[1]));
                     #else:
@@ -129,9 +129,9 @@ class PointwiseMutualInformation():
                     assert(content[0]<content[1]);
                     
                     if content[0] in target_vocab and content[1] in target_vocab:
-                        self._bitype_freqdist.inc((target_vocab[content[0]], target_vocab[content[1]]), float(content[2]));
+                        self._bitype_freqdist[(target_vocab[content[0]], target_vocab[content[1]])]+=float(content[2]);
                     else:
-                        self._bitype_freqdist.inc((dummy_type, dummy_type), float(content[2]));
+                        self._bitype_freqdist[(dummy_type, dummy_type)]+=float(content[2]);
                         
                 if line_counter % 10000000==0:
                     print "loaded %d lines in pmi-statistics..." % line_counter
@@ -145,10 +145,10 @@ class PointwiseMutualInformation():
                 line = line.strip();
                 content = line.split();
                 if len(content)==2:
-                    self._unitype_freqdist.inc(content[0], float(content[1]));
+                    self._unitype_freqdist[content[0]]+=float(content[1]);
                 elif len(content)==3:
                     assert(content[0]<content[1]);
-                    self._bitype_freqdist.inc((content[0], content[1]), float(content[2]));
+                    self._bitype_freqdist[(content[0], content[1])]+=float(content[2]);
                     
                 if line_counter % 10000000==0:
                     print "loaded %d lines in pmi-statistics..." % line_counter
@@ -245,9 +245,9 @@ class PointwiseMutualInformation():
             
             content = line.split();
             if len(content)==2:
-                self._unitype_freqdist.inc(content[0], int(content[1]));
+                self._unitype_freqdist[content[0]]+=int(content[1]);
             elif len(content)==3:
-                self._bitype_freqdist.inc((content[0], content[1]), int(content[2]));
+                self._bitype_freqdist[(content[0], content[1])]+=int(content[2]);
             else:
                 print "warning: unexpected key-value sequence..."
             

@@ -25,10 +25,9 @@ library(scales)
 #file_name="nips-150-15K-50-1500-500.denews.10"
 #file_name="nips-150-15K-50-1500-500.20news.10"
 
-file_name="statistics.10"
+file_name="statistics.20news.10"
 
 #project_home="/windows/d/Workspace/PyHDP/"
-#project_home="/Users/kezhai/Workspace/PyHDP/"
 project_home="/Users/student/Workspace/PyHDP/"
 
 input_directory=paste(project_home, "result/", sep="");
@@ -54,8 +53,6 @@ plot_pic <- ggplot(data=input_data, aes(x=factor(inference),  y=value, lower='25
 	facet_grid(metric ~ dataset, scales="free") +
 	#labs(size="Tokens Count") +
 	labs(x="", y="") +
-
-	#scale_x_log10() +
 
 	theme(legend.margin = unit(0, "line")) +
 	theme(legend.key.height=unit(1.5,"line")) +
